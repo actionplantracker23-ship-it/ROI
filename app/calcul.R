@@ -1,181 +1,151 @@
-# Moteur de calcul du ROI des projets de santé communautaire.
+# Moteur de calcul coût-efficacité pour des projets d'innovation en santé.
 #
-# Trois méthodes, calculées à partir des mêmes données :
-#   - ROI financier  : (bénéfices monétaires - coûts) / coûts
-#   - SROI           : (bénéfices monétaires + valeur sociale) / coûts
-#   - Coût-efficacité: coût par DALY évitée, comparé au PIB par habitant
+# Chaque projet décrit librement ses activités. Pour chaque activité :
+#   - coûts : investissement (année 1) et coût récurrent annuel
+#   - portée : bénéficiaires par an
+#   - effet  : nombre de résultats par an (cas traités, enfants vaccinés…),
+#              DALY évitées par résultat, économies générées par résultat
 #
-# Toutes les valeurs monétaires sont en monnaie locale. L'année 1 n'est pas
-# actualisée ; l'année t est actualisée par 1 / (1 + taux)^(t - 1).
+# Le DALY sert d'unité commune pour comparer des activités différentes.
+# Les coûts, les résultats et les DALY sont actualisés au même taux
+# (année 1 non actualisée) ; les bénéficiaires sont comptés sans actualisation.
 
 facteur_actualisation <- function(taux, n) {
   1 / (1 + taux)^(seq_len(n) - 1)
 }
 
-# Part du résultat réellement imputable au projet.
-part_impact <- function(deadweight, attribution, displacement) {
-  borne <- function(x) pmin(1, pmax(0, x))
-  (1 - borne(deadweight)) * (1 - borne(attribution)) * (1 - borne(displacement))
+ratio <- function(a, b) {
+  if (length(a) != 1 || length(b) != 1 || !is.finite(a) || !is.finite(b) || b <= 0) NA_real_ else a / b
 }
 
-# Unités produites chaque année du projet : unités de l'année 1, puis croissance annuelle.
-unites_par_annee <- function(unites_an1, croissance, duree_projet) {
-  unites_an1 * (1 + croissance)^(seq_len(duree_projet) - 1)
-}
-
-# Répartit dans le temps l'effet des unités produites : une unité produite
-# l'année t continue de produire de l'effet pendant `duree_effet` années,
-# avec une baisse de `drop_off` par an après la première année.
-unites_effectives <- function(unites, duree_effet, drop_off, longueur) {
-  duree_effet <- max(1, round(duree_effet))
-  garde <- 1 - min(1, max(0, drop_off))
-  out <- numeric(longueur)
-  for (t in seq_along(unites)) {
-    for (k in 0:(duree_effet - 1)) {
-      if (t + k <= longueur) out[t + k] <- out[t + k] + unites[t] * garde^k
-    }
-  }
-  out
-}
-
-# Durée d'analyse : années du projet + traîne des effets durables.
-duree_analyse <- function(duree_projet, resultats) {
-  traine <- if (nrow(resultats) > 0) max(1, round(resultats$duree_effet)) else 1
-  duree_projet + traine - 1
-}
-
-ratio <- function(a, b) if (is.finite(b) && b > 0) a / b else NA_real_
-
-# Flux annuels (non actualisés) de coûts, bénéfices et DALY évitées.
-#
-# parametres : list(annee_debut, duree, taux_actualisation, taux_change, pib_hab_usd)
-# couts      : data.frame(libelle, investissement, recurrent)
-#              investissement = coût unique en année 1, recurrent = coût chaque année
-# resultats  : data.frame(libelle, unites, croissance, eco_systeme, eco_menages,
-#              productivite, valeur_sociale, daly, deadweight, attribution,
-#              displacement, duree_effet, drop_off)
-flux_annuels <- function(parametres, couts, resultats) {
-  duree <- parametres$duree
-  n <- duree_analyse(duree, resultats)
-  zero <- numeric(n)
-
-  cout_annuel <- zero
-  if (nrow(couts) > 0) {
-    cout_annuel[seq_len(duree)] <- sum(couts$recurrent, na.rm = TRUE)
-    cout_annuel[1] <- cout_annuel[1] + sum(couts$investissement, na.rm = TRUE)
-  }
-
-  eco_systeme <- eco_menages <- productivite <- valeur_sociale <- daly <- zero
-  for (i in seq_len(nrow(resultats))) {
-    r <- resultats[i, ]
-    u <- unites_par_annee(r$unites, r$croissance, duree)
-    eff <- unites_effectives(u, r$duree_effet, r$drop_off, n) *
-      part_impact(r$deadweight, r$attribution, r$displacement)
-    eco_systeme <- eco_systeme + eff * r$eco_systeme
-    eco_menages <- eco_menages + eff * r$eco_menages
-    productivite <- productivite + eff * r$productivite
-    valeur_sociale <- valeur_sociale + eff * r$valeur_sociale
-    daly <- daly + eff * r$daly
-  }
-
-  data.frame(
-    annee = parametres$annee_debut + seq_len(n) - 1,
-    couts = cout_annuel,
-    eco_systeme = eco_systeme,
-    eco_menages = eco_menages,
-    productivite = productivite,
-    benefices = eco_systeme + eco_menages + productivite,
-    valeur_sociale = valeur_sociale,
-    daly = daly
-  )
-}
-
-calcul_roi <- function(parametres, couts, resultats) {
-  flux <- flux_annuels(parametres, couts, resultats)
-  fa <- facteur_actualisation(parametres$taux_actualisation, nrow(flux))
-  va <- function(x) sum(x * fa)
-
-  va_couts <- va(flux$couts)
-  va_benefices <- va(flux$benefices)
-  va_eco_soins <- va(flux$eco_systeme + flux$eco_menages)
-  va_social <- va(flux$valeur_sociale)
-  daly <- va(flux$daly)
-
-  flux$couts_cumules <- cumsum(flux$couts * fa)
-  flux$benefices_cumules <- cumsum(flux$benefices * fa)
-  flux$valeur_totale_cumulee <- cumsum((flux$benefices + flux$valeur_sociale) * fa)
-
-  rentable <- which(flux$benefices_cumules >= flux$couts_cumules & flux$couts_cumules > 0)
-  annee_retour <- if (length(rentable) > 0) flux$annee[rentable[1]] else NA
-
-  cout_par_daly <- ratio(va_couts, daly)
-  cout_par_daly_usd <- ratio(cout_par_daly, parametres$taux_change)
-
+# Indicateurs d'une activité (ou d'un total) à partir de ses flux actualisés.
+indicateurs <- function(cout, beneficiaires, resultats, daly, economies) {
   list(
-    flux = flux,
-    financier = list(
-      va_couts = va_couts,
-      va_benefices = va_benefices,
-      van = va_benefices - va_couts,
-      roi = ratio(va_benefices - va_couts, va_couts),
-      ratio_bc = ratio(va_benefices, va_couts),
-      annee_retour = annee_retour
-    ),
-    sroi = list(
-      va_couts = va_couts,
-      va_financiere = va_benefices,
-      va_sociale = va_social,
-      va_totale = va_benefices + va_social,
-      ratio = ratio(va_benefices + va_social, va_couts)
-    ),
-    cea = list(
-      va_couts = va_couts,
-      va_couts_nets = va_couts - va_eco_soins,
-      daly = daly,
-      cout_par_daly = cout_par_daly,
-      cout_net_par_daly = ratio(va_couts - va_eco_soins, daly),
-      cout_par_daly_usd = cout_par_daly_usd,
-      ratio_pib = ratio(cout_par_daly_usd, parametres$pib_hab_usd)
-    )
+    cout = cout,
+    beneficiaires = beneficiaires,
+    resultats = resultats,
+    daly = daly,
+    economies = economies,
+    cout_net = cout - economies,
+    cout_par_beneficiaire = ratio(cout, beneficiaires),
+    cout_par_resultat = ratio(cout, resultats),
+    cout_par_daly = ratio(cout, daly),
+    cout_net_par_daly = ratio(cout - economies, daly),
+    roi = ratio(economies - cout, cout)
   )
 }
 
-# Interprétation du coût par DALY par rapport au PIB/habitant.
-# Repères OMS-CHOICE (< 1 PIB/hab : très coût-efficace ; < 3 : coût-efficace),
-# aujourd'hui jugés trop généreux : on signale aussi le seuil plus prudent de 0,5.
-interpretation_cea <- function(ratio_pib) {
-  if (is.na(ratio_pib)) return("Pas de DALY évitée renseignée.")
-  if (ratio_pib < 0.5) return("Très coût-efficace (moins de 0,5 × PIB/habitant par DALY évitée).")
-  if (ratio_pib < 1) return("Coût-efficace (moins de 1 × PIB/habitant par DALY évitée).")
-  if (ratio_pib < 3) return("Potentiellement coût-efficace selon l'ancien repère OMS (1 à 3 × PIB/habitant), à confirmer.")
-  "Peu coût-efficace (plus de 3 × PIB/habitant par DALY évitée)."
+# parametres : list(duree, taux_actualisation, attribution)
+#   attribution = part de l'effet réellement due à l'innovation (0–1)
+# activites  : data.frame(nom, resultat, investissement, recurrent, beneficiaires,
+#              resultats, daly_par_resultat, economie_par_resultat)
+# reference  : list(cout_annuel, daly_annuels) — situation sans l'innovation (optionnelle)
+calcul_ce <- function(parametres, activites, reference = NULL) {
+  n <- max(1, round(parametres$duree))
+  fa <- facteur_actualisation(parametres$taux_actualisation, n)
+  somme_fa <- sum(fa)
+  part <- min(1, max(0, parametres$attribution))
+
+  par_activite <- lapply(seq_len(nrow(activites)), function(i) {
+    a <- activites[i, ]
+    cout <- a$investissement + a$recurrent * somme_fa
+    resultats <- a$resultats * somme_fa * part
+    ind <- indicateurs(
+      cout = cout,
+      beneficiaires = a$beneficiaires * n,
+      resultats = resultats,
+      daly = resultats * a$daly_par_resultat,
+      economies = resultats * a$economie_par_resultat
+    )
+    c(list(nom = a$nom, resultat = a$resultat), ind)
+  })
+
+  somme <- function(champ) sum(vapply(par_activite, `[[`, 0, champ))
+  total <- indicateurs(
+    cout = somme("cout"),
+    beneficiaires = somme("beneficiaires"),
+    resultats = NA_real_,  # résultats d'activités différentes : non additionnables
+    daly = somme("daly"),
+    economies = somme("economies")
+  )
+
+  # Ratio coût-efficacité différentiel (ICER) par rapport à la situation de référence.
+  icer <- NA_real_
+  if (!is.null(reference) && (reference$cout_annuel > 0 || reference$daly_annuels > 0)) {
+    cout_ref <- reference$cout_annuel * somme_fa
+    daly_ref <- reference$daly_annuels * somme_fa
+    icer <- ratio(total$cout - cout_ref, total$daly - daly_ref)
+    total$cout_reference <- cout_ref
+    total$daly_reference <- daly_ref
+  }
+  total$icer <- icer
+
+  list(activites = par_activite, total = total)
 }
 
-# Analyse de sensibilité : recalcule les indicateurs sous des hypothèses alternatives.
-sensibilite <- function(parametres, couts, resultats) {
-  monetaire <- c("eco_systeme", "eco_menages", "productivite", "valeur_sociale")
-  scenario <- function(nom, p = parametres, c = couts, r = resultats) {
-    res <- calcul_roi(p, c, r)
-    data.frame(
-      Scenario = nom,
-      ROI = res$financier$roi,
-      SROI = res$sroi$ratio,
-      CoutParDALY = res$cea$cout_par_daly
-    )
+# Seuil de coût-efficacité par DALY : celui saisi par l'utilisateur, sinon
+# 0,5 × PIB/habitant (repère prudent recommandé depuis l'abandon des 1–3 × PIB).
+seuil_effectif <- function(seuil, pib_hab) {
+  if (is.finite(seuil) && seuil > 0) return(seuil)
+  if (is.finite(pib_hab) && pib_hab > 0) return(0.5 * pib_hab)
+  NA_real_
+}
+
+# Verdict : niveau (pour la couleur) et phrase d'interprétation.
+verdict <- function(cout_par_daly, seuil) {
+  if (is.na(cout_par_daly)) {
+    return(list(niveau = "inconnu",
+                texte = "Renseignez les DALY évitées par résultat pour obtenir le coût par DALY."))
   }
-  echelle <- function(r, f) { r[monetaire] <- r[monetaire] * f; r }
-  plus_prudent <- function(r) {
-    r$deadweight <- pmin(1, r$deadweight * 1.5)
-    r$attribution <- pmin(1, r$attribution * 1.5)
-    r
+  if (cout_par_daly <= 0) {
+    return(list(niveau = "excellent",
+                texte = "Dominante : l'innovation évite des DALY tout en économisant de l'argent."))
   }
+  if (is.na(seuil)) {
+    return(list(niveau = "inconnu",
+                texte = "Renseignez un seuil ou le PIB par habitant pour interpréter le coût par DALY."))
+  }
+  r <- cout_par_daly / seuil
+  if (r <= 0.5) return(list(niveau = "excellent", texte = "Très coût-efficace : bien en dessous du seuil."))
+  if (r <= 1) return(list(niveau = "bon", texte = "Coût-efficace : en dessous du seuil."))
+  if (r <= 2) return(list(niveau = "limite", texte = "À la limite : au-dessus du seuil, à justifier ou optimiser."))
+  list(niveau = "faible", texte = "Peu coût-efficace : nettement au-dessus du seuil.")
+}
+
+# Analyse de sensibilité sur le coût par DALY évitée du projet.
+sensibilite <- function(parametres, activites, reference = NULL) {
+  scenario <- function(nom, p = parametres, a = activites) {
+    t <- calcul_ce(p, a, reference)$total
+    data.frame(scenario = nom, cout_par_daly = t$cout_par_daly,
+               cout_par_beneficiaire = t$cout_par_beneficiaire, icer = t$icer)
+  }
+  echelle <- function(a, cols, f) { a[cols] <- a[cols] * f; a }
+  couts <- c("investissement", "recurrent")
+  effets <- c("resultats")
   rbind(
     scenario("Scénario de base"),
-    scenario("Valeurs monétaires -20 %", r = echelle(resultats, 0.8)),
-    scenario("Valeurs monétaires +20 %", r = echelle(resultats, 1.2)),
-    scenario("Coûts +20 %", c = transform(couts, investissement = investissement * 1.2, recurrent = recurrent * 1.2)),
-    scenario("Deadweight et attribution × 1,5", r = plus_prudent(resultats)),
-    scenario("Taux d'actualisation 0 %", p = modifyList(parametres, list(taux_actualisation = 0))),
-    scenario("Taux d'actualisation 6 %", p = modifyList(parametres, list(taux_actualisation = 0.06)))
+    scenario("Coûts +20 %", a = echelle(activites, couts, 1.2)),
+    scenario("Coûts −20 %", a = echelle(activites, couts, 0.8)),
+    scenario("Résultats −20 %", a = echelle(activites, effets, 0.8)),
+    scenario("Résultats +20 %", a = echelle(activites, effets, 1.2)),
+    scenario("Attribution −20 points", p = modifyList(parametres, list(attribution = max(0, parametres$attribution - 0.2)))),
+    scenario("Actualisation 0 %", p = modifyList(parametres, list(taux_actualisation = 0))),
+    scenario("Actualisation 6 %", p = modifyList(parametres, list(taux_actualisation = 0.06)))
+  )
+}
+
+# Projet d'exemple, pour montrer comment remplir l'outil (valeurs fictives).
+exemple_activites <- function() {
+  data.frame(
+    nom = c("Formation des agents communautaires au test rapide",
+            "Diagnostic et traitement du paludisme à domicile",
+            "Suivi des femmes enceintes par SMS"),
+    resultat = c("agents formés", "cas traités", "femmes suivies"),
+    investissement = c(4000000, 2500000, 1500000),
+    recurrent = c(1000000, 6000000, 1200000),
+    beneficiaires = c(60, 12000, 800),
+    resultats = c(60, 3000, 800),
+    daly_par_resultat = c(0, 0.02, 0.05),
+    economie_par_resultat = c(0, 2500, 3000)
   )
 }

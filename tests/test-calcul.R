@@ -2,92 +2,79 @@
 library(testthat)
 
 source(file.path("..", "app", "calcul.R"))
-source(file.path("..", "app", "modeles.R"))
 
-params <- list(annee_debut = 2026, duree = 1, taux_actualisation = 0, taux_change = 100, pib_hab_usd = 1000)
-couts_simples <- data.frame(libelle = "Projet", investissement = 1000, recurrent = 0)
-resultat_simple <- function(...) {
-  r <- data.frame(libelle = "R", unites = 100, croissance = 0, eco_systeme = 15, eco_menages = 5,
-                  productivite = 0, valeur_sociale = 10, daly = 0.1, deadweight = 0,
-                  attribution = 0, displacement = 0, duree_effet = 1, drop_off = 0)
-  modifyList(r, list(...))
+params <- list(duree = 1, taux_actualisation = 0, attribution = 1)
+activite <- function(...) {
+  a <- data.frame(nom = "A", resultat = "cas traités", investissement = 1000, recurrent = 0,
+                  beneficiaires = 50, resultats = 100, daly_par_resultat = 0.1,
+                  economie_par_resultat = 5)
+  modifyList(a, list(...))
 }
 
-test_that("ROI, SROI et coût par DALY sur un cas simple", {
-  res <- calcul_roi(params, couts_simples, resultat_simple())
-  expect_equal(res$financier$va_benefices, 2000)
-  expect_equal(res$financier$roi, 1)
-  expect_equal(res$financier$ratio_bc, 2)
-  expect_equal(res$financier$annee_retour, 2026)
-  expect_equal(res$sroi$ratio, 3)
-  expect_equal(res$cea$daly, 10)
-  expect_equal(res$cea$cout_par_daly, 100)
-  expect_equal(res$cea$cout_par_daly_usd, 1)
-  expect_equal(res$cea$ratio_pib, 0.001)
-  expect_equal(res$cea$cout_net_par_daly, -100)
+test_that("indicateurs de coût-efficacité sur un cas simple", {
+  r <- calcul_ce(params, activite())
+  a <- r$activites[[1]]
+  expect_equal(a$cout, 1000)
+  expect_equal(a$cout_par_beneficiaire, 20)
+  expect_equal(a$cout_par_resultat, 10)
+  expect_equal(a$daly, 10)
+  expect_equal(a$cout_par_daly, 100)
+  expect_equal(a$economies, 500)
+  expect_equal(a$cout_net_par_daly, 50)
+  expect_equal(a$roi, -0.5)
+  expect_equal(r$total$cout_par_daly, 100)
 })
 
-test_that("deadweight, attribution et déplacement réduisent l'impact", {
-  r <- resultat_simple(deadweight = 0.5, attribution = 0.2, displacement = 0.5)
-  res <- calcul_roi(params, couts_simples, r)
-  expect_equal(res$financier$va_benefices, 2000 * 0.5 * 0.8 * 0.5)
-  expect_equal(res$cea$daly, 10 * 0.2)
+test_that("plusieurs années, actualisation et attribution", {
+  p <- list(duree = 2, taux_actualisation = 0.1, attribution = 0.5)
+  r <- calcul_ce(p, activite(recurrent = 110))
+  a <- r$activites[[1]]
+  expect_equal(a$cout, 1000 + 110 + 100)
+  expect_equal(a$beneficiaires, 100)
+  expect_equal(a$resultats, 100 * (1 + 1 / 1.1) * 0.5)
 })
 
-test_that("actualisation : l'année 1 n'est pas actualisée", {
-  expect_equal(facteur_actualisation(0.1, 3), c(1, 1 / 1.1, 1 / 1.21))
-  p <- modifyList(params, list(duree = 2, taux_actualisation = 0.1))
-  c <- data.frame(libelle = "x", investissement = 0, recurrent = 110)
-  res <- calcul_roi(p, c, resultat_simple(unites = 0))
-  expect_equal(res$financier$va_couts, 110 + 100)
+test_that("les totaux additionnent les activités", {
+  acts <- rbind(activite(), activite(nom = "B", investissement = 3000, daly_par_resultat = 0.3))
+  r <- calcul_ce(params, acts)
+  expect_equal(r$total$cout, 4000)
+  expect_equal(r$total$daly, 40)
+  expect_equal(r$total$cout_par_daly, 100)
+  expect_true(is.na(r$total$resultats))
 })
 
-test_that("croissance annuelle des unités", {
-  expect_equal(unites_par_annee(100, 0.1, 3), c(100, 110, 121))
-})
-
-test_that("effet sur plusieurs années avec baisse annuelle prolonge l'analyse", {
-  expect_equal(unites_effectives(100, 3, 0.5, 3), c(100, 50, 25))
-  r <- resultat_simple(duree_effet = 3, drop_off = 0.5)
-  res <- calcul_roi(params, couts_simples, r)
-  expect_equal(nrow(res$flux), 3)
-  expect_equal(res$flux$annee, 2026:2028)
-  expect_equal(res$cea$daly, (100 + 50 + 25) * 0.1)
-  expect_equal(res$flux$couts, c(1000, 0, 0))
+test_that("ICER par rapport à la situation de référence", {
+  r <- calcul_ce(params, activite(), list(cout_annuel = 400, daly_annuels = 4))
+  expect_equal(r$total$icer, (1000 - 400) / (10 - 4))
+  sans <- calcul_ce(params, activite(), list(cout_annuel = 0, daly_annuels = 0))
+  expect_true(is.na(sans$total$icer))
 })
 
 test_that("pas de division par zéro", {
-  vide <- data.frame(libelle = "x", investissement = 0, recurrent = 0)
-  res <- calcul_roi(params, vide, resultat_simple(daly = 0))
-  expect_true(is.na(res$financier$roi))
-  expect_true(is.na(res$sroi$ratio))
-  expect_true(is.na(res$cea$cout_par_daly))
-  expect_true(is.na(res$financier$annee_retour))
+  r <- calcul_ce(params, activite(daly_par_resultat = 0, beneficiaires = 0, resultats = 0))
+  expect_true(is.na(r$activites[[1]]$cout_par_daly))
+  expect_true(is.na(r$activites[[1]]$cout_par_beneficiaire))
+  vide <- calcul_ce(params, activite(investissement = 0))
+  expect_true(is.na(vide$activites[[1]]$roi))
 })
 
-test_that("retour sur investissement non atteint", {
-  res <- calcul_roi(params, couts_simples, resultat_simple(eco_systeme = 1, eco_menages = 0))
-  expect_true(is.na(res$financier$annee_retour))
-  expect_lt(res$financier$roi, 0)
+test_that("seuil et verdict", {
+  expect_equal(seuil_effectif(NA, 1000), 500)
+  expect_equal(seuil_effectif(800, 1000), 800)
+  expect_true(is.na(seuil_effectif(NA, NA)))
+  expect_equal(verdict(100, 500)$niveau, "excellent")
+  expect_equal(verdict(400, 500)$niveau, "bon")
+  expect_equal(verdict(800, 500)$niveau, "limite")
+  expect_equal(verdict(2000, 500)$niveau, "faible")
+  expect_equal(verdict(-5, 500)$niveau, "excellent")
+  expect_equal(verdict(NA, 500)$niveau, "inconnu")
+  expect_equal(verdict(100, NA)$niveau, "inconnu")
 })
 
-test_that("interprétation du coût-efficacité", {
-  expect_match(interpretation_cea(0.3), "Très coût-efficace")
-  expect_match(interpretation_cea(0.8), "^Coût-efficace")
-  expect_match(interpretation_cea(2), "Potentiellement")
-  expect_match(interpretation_cea(5), "Peu")
-})
-
-test_that("tous les modèles d'exemple se calculent pour tous les pays", {
-  for (code in names(pays)) for (type in types_projet) {
-    fx <- pays[[code]]$taux_change
-    p <- list(annee_debut = 2026, duree = 3, taux_actualisation = 0.03, taux_change = fx,
-              pib_hab_usd = pays[[code]]$pib_hab_usd)
-    res <- calcul_roi(p, couts_exemple(type, fx), resultats_exemple(type, fx))
-    expect_true(is.finite(res$financier$roi))
-    expect_true(is.finite(res$sroi$ratio))
-    expect_true(is.finite(res$cea$cout_par_daly))
-    s <- sensibilite(p, couts_exemple(type, fx), resultats_exemple(type, fx))
-    expect_equal(nrow(s), 7)
-  }
+test_that("sensibilité et exemple", {
+  p <- list(duree = 3, taux_actualisation = 0.03, attribution = 0.8)
+  s <- sensibilite(p, exemple_activites(), list(cout_annuel = 0, daly_annuels = 0))
+  expect_equal(nrow(s), 8)
+  expect_true(all(is.finite(s$cout_par_daly)))
+  expect_gt(s$cout_par_daly[2], s$cout_par_daly[1])
 })
