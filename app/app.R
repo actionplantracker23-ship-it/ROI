@@ -18,7 +18,7 @@ tr <- function(fr, en) tagList(span(class = "t-fr", fr), span(class = "t-en", en
 placeholders <- list(
   "^nom$" = c("ex. Diagnostic mobile du paludisme", "e.g. Mobile malaria diagnosis"),
   "^organisation$" = c("ex. ONG, district sanitaire…", "e.g. NGO, health district…"),
-  "^pays$" = c("ex. Ouganda", "e.g. Uganda"),
+  "^pays$" = c("Nom du pays", "Country name"),
   "^monnaie$" = c("ex. XOF, KES, UGX, USD", "e.g. XOF, KES, UGX, USD"),
   "^description$" = c("Ce que fait le projet, pour qui ; d'où viennent vos chiffres…",
                       "What the project does, for whom; where your figures come from…"),
@@ -42,6 +42,19 @@ function appliquerLangue(l) {
 function basculerLangue() { appliquerLangue(langueCourante() === 'en' ? 'fr' : 'en'); }
 $(document).on('shiny:connected', function () { appliquerLangue(langueCourante()); });
 ", jsonlite::toJSON(placeholders))
+
+# ---- Pays -------------------------------------------------------------------
+#
+# Valeurs proposées au choix du pays, toutes modifiables par l'intervenant.
+# Ordres de grandeur indicatifs (Banque mondiale, PIB par habitant ~2023-2024 ;
+# taux de change ~2025) : à vérifier avant tout rapport officiel.
+
+pays_defauts <- list(
+  BF = list(fr = "Burkina Faso", en = "Burkina Faso", monnaie = "XOF", taux_change = 580, pib_hab = 520000),
+  KE = list(fr = "Kenya", en = "Kenya", monnaie = "KES", taux_change = 129, pib_hab = 284000),
+  UG = list(fr = "Ouganda", en = "Uganda", monnaie = "UGX", taux_change = 3650, pib_hab = 4000000)
+)
+choix_pays <- c("Burkina Faso" = "BF", "Kenya" = "KE", "Ouganda / Uganda" = "UG", "Autre / Other" = "autre")
 
 # ---- Style ------------------------------------------------------------------
 
@@ -366,9 +379,10 @@ ui <- page_navbar(
         textInput("organisation", tr("Organisation", "Organisation"), ""),
         layout_column_wrap(
           width = "180px",
-          textInput("pays", tr("Pays / zone", "Country / area"), ""),
-          textInput("monnaie", tr("Monnaie", "Currency"), "")
+          selectInput("pays_choix", tr("Pays", "Country"), choix_pays, "BF"),
+          textInput("monnaie", tr("Monnaie", "Currency"), "XOF")
         ),
+        conditionalPanel("input.pays_choix == 'autre'", textInput("pays", tr("Autre pays", "Other country"), "")),
         textAreaInput("description", tr("Description et sources des données", "Description and data sources"),
                       "", rows = 3)
       ),
@@ -392,13 +406,14 @@ ui <- page_navbar(
         layout_column_wrap(
           width = "180px",
           numericInput("pib_hab", tr("PIB par habitant (monnaie du projet)", "GDP per capita (project currency)"),
-                       NA, min = 0),
+                       pays_defauts$BF$pib_hab, min = 0),
           numericInput("seuil", tr("Seuil par DALY évitée", "Threshold per DALY averted"), NA, min = 0),
-          numericInput("taux_change", tr("Monnaie du projet pour 1 USD", "Project currency per 1 USD"), NA, min = 0)
+          numericInput("taux_change", tr("Monnaie du projet pour 1 USD", "Project currency per 1 USD"),
+                       pays_defauts$BF$taux_change, min = 0)
         ),
         div(class = "aide",
-            tr("Seuil : celui de votre ministère ou bailleur. Sans seuil, l'outil prend 0,5 × PIB par habitant comme repère indicatif. Le taux de change (optionnel) sert à afficher les équivalents en USD.",
-               "Threshold: your ministry's or funder's. Without one, the tool uses 0.5 × GDP per capita as an indicative benchmark. The exchange rate (optional) is used to show USD equivalents."))
+            tr("Le choix du pays propose la monnaie, un PIB par habitant et un taux de change indicatifs (Banque mondiale, 2023-2025) : vérifiez-les et corrigez-les si besoin. Seuil : celui de votre ministère ou bailleur ; sans seuil, l'outil prend 0,5 × PIB par habitant comme repère indicatif. Le taux de change sert à afficher les équivalents en USD.",
+               "Choosing a country suggests its currency and an indicative GDP per capita and exchange rate (World Bank, 2023-2025): check and correct them if needed. Threshold: your ministry's or funder's; without one, the tool uses 0.5 × GDP per capita as an indicative benchmark. The exchange rate is used to show USD equivalents."))
       )
     ),
     card(
@@ -595,6 +610,23 @@ server <- function(input, output, session) {
   oui <- function(id) identical(input[[id]], "oui")
 
   monnaie <- reactive(txt("monnaie"))
+
+  pays_nom <- reactive({
+    code <- input$pays_choix %||% "autre"
+    if (code %in% names(pays_defauts)) pays_defauts[[code]][[if (en()) "en" else "fr"]] else txt("pays")
+  })
+
+  # À l'ouverture d'un projet, garder ses propres valeurs plutôt que celles du pays.
+  garder_valeurs_pays <- reactiveVal(FALSE)
+
+  observeEvent(input$pays_choix, {
+    if (garder_valeurs_pays()) { garder_valeurs_pays(FALSE); return() }
+    d <- pays_defauts[[input$pays_choix]]
+    if (is.null(d)) return()
+    updateTextInput(session, "monnaie", value = d$monnaie)
+    updateNumericInput(session, "taux_change", value = d$taux_change)
+    updateNumericInput(session, "pib_hab", value = d$pib_hab)
+  }, ignoreInit = TRUE)
   argent <- function(x) if (is.null(x) || is.na(x) || !is.finite(x)) "—" else paste(fmt(x), monnaie())
   en_usd <- function(x) {
     fx <- num("taux_change", NA)
@@ -738,7 +770,12 @@ server <- function(input, output, session) {
                      "inc_couts", "inc_resultats", "inc_daly", "inc_economies")
   champs_profil <- c("effets_sante", "mode_daly", "economies", "comparer", "incertitude_on")
 
-  appliquer <- function(textes = list(), nombres = list(), profil = list(), acts = NULL) {
+  appliquer <- function(textes = list(), nombres = list(), profil = list(), acts = NULL, pays_choix = NULL) {
+    if (!is.null(pays_choix)) {
+      actuel <- isolate(input$pays_choix) %||% "BF"
+      if (!identical(pays_choix, actuel) && length(nombres) > 0) garder_valeurs_pays(TRUE)
+      updateSelectInput(session, "pays_choix", selected = pays_choix)
+    }
     for (id in champs_texte) {
       v <- textes[[id]] %||% ""
       if (id == "description") updateTextAreaInput(session, id, value = v) else updateTextInput(session, id, value = v)
@@ -756,14 +793,15 @@ server <- function(input, output, session) {
       textes = list(
         nom = if (anglais) "Mobile malaria diagnosis (fictitious example)" else "Diagnostic mobile du paludisme (exemple fictif)",
         organisation = if (anglais) "Demonstration project" else "Projet de démonstration",
-        pays = "Burkina Faso", monnaie = "XOF",
+        pays = "", monnaie = "XOF",
         description = if (anglais) "Fictitious example: community health workers test and treat malaria at home, with SMS follow-up of pregnant women."
           else "Exemple fictif : des agents communautaires dépistent et traitent le paludisme à domicile, avec un suivi des femmes enceintes par SMS."),
-      nombres = list(duree = 3, taux_couts = 3, taux_effets = 3, attribution = 80, pib_hab = 500000,
-                     seuil = NA, taux_change = 600, comp_investissement = 0, comp_cout = 4000000, comp_daly = 40),
+      nombres = list(duree = 3, taux_couts = 3, taux_effets = 3, attribution = 80, pib_hab = pays_defauts$BF$pib_hab,
+                     seuil = NA, taux_change = pays_defauts$BF$taux_change, comp_investissement = 0,
+                     comp_cout = 4000000, comp_daly = 40),
       profil = list(effets_sante = "oui", mode_daly = "direct", economies = "oui", comparer = "oui",
                     incertitude_on = "oui"),
-      acts = a
+      acts = a, pays_choix = "BF"
     )
   }
 
@@ -772,9 +810,12 @@ server <- function(input, output, session) {
   observeEvent(input$demarrer_exemple, { exemple(if (en()) "en" else "fr"); aller("resultats") })
 
   observeEvent(input$demarrer_vide, {
+    d <- pays_defauts[[input$pays_choix %||% "BF"]]
     appliquer(
-      nombres = list(duree = 3, taux_couts = 3, taux_effets = 3, attribution = 100, pib_hab = NA, seuil = NA,
-                     taux_change = NA, comp_investissement = 0, comp_cout = 0, comp_daly = 0),
+      textes = list(monnaie = d$monnaie %||% txt("monnaie")),
+      nombres = list(duree = 3, taux_couts = 3, taux_effets = 3, attribution = 100,
+                     pib_hab = d$pib_hab %||% NA, seuil = NA, taux_change = d$taux_change %||% NA,
+                     comp_investissement = 0, comp_cout = 0, comp_daly = 0),
       profil = list(effets_sante = "oui", mode_daly = "direct", economies = "non", comparer = "non",
                     incertitude_on = "non")
     )
@@ -787,7 +828,8 @@ server <- function(input, output, session) {
     filename = function() paste0(gsub("[^A-Za-z0-9_-]+", "_", if (nzchar(txt("nom"))) txt("nom") else "project"), ".json"),
     content = function(file) {
       projet <- list(
-        version = 2,
+        version = 3,
+        pays_choix = input$pays_choix,
         textes = lapply(setNames(champs_texte, champs_texte), txt),
         nombres = lapply(setNames(champs_nombre, champs_nombre), function(id) num(id, NA)),
         profil = lapply(setNames(champs_profil, champs_profil), function(id) input[[id]]),
@@ -803,7 +845,16 @@ server <- function(input, output, session) {
       showNotification(L("Fichier de projet invalide.", "Invalid project file."), type = "error")
       return()
     }
-    appliquer(projet$textes %||% list(), projet$nombres %||% list(), projet$profil %||% list(), projet$activites)
+    # Anciens fichiers : le pays était un texte libre.
+    code <- projet$pays_choix
+    if (is.null(code)) {
+      ancien <- projet$textes$pays %||% ""
+      trouve <- names(pays_defauts)[vapply(pays_defauts, function(d) tolower(ancien) %in% tolower(c(d$fr, d$en)), TRUE)]
+      code <- if (length(trouve) > 0) trouve[1] else "autre"
+      if (code != "autre") projet$textes$pays <- ""
+    }
+    appliquer(projet$textes %||% list(), projet$nombres %||% list(), projet$profil %||% list(), projet$activites,
+              pays_choix = code)
     showNotification(L("Projet ouvert.", "Project opened."), type = "message")
   })
 
@@ -841,7 +892,7 @@ server <- function(input, output, session) {
                                          "Add at least one activity to see the results."))))
     }
     titre <- div(class = "detail", if (nzchar(txt("nom"))) txt("nom") else L("Votre projet", "Your project"),
-                 if (nzchar(txt("pays"))) paste(" ·", txt("pays")))
+                 if (nzchar(pays_nom())) paste(" ·", pays_nom()))
     if (!oui("effets_sante")) {
       return(div(class = "verdict", style = fond(couleurs$sarcelle), titre,
                  div(class = "chiffre", argent(r$couts$cout_par_beneficiaire),
@@ -1105,7 +1156,7 @@ server <- function(input, output, session) {
     date <- format(Sys.Date(), L("%d/%m/%Y", "%Y-%m-%d"))
     tagList(
       h2(if (nzchar(txt("nom"))) txt("nom") else L("Évaluation économique du projet", "Economic evaluation of the project")),
-      p(class = "aide", paste(c(txt("organisation"), txt("pays"), date), collapse = " · ")),
+      p(class = "aide", paste(c(txt("organisation"), pays_nom(), date), collapse = " · ")),
       if (nzchar(txt("description"))) p(txt("description")),
       h4(L("Paramètres", "Parameters")),
       tags$table(class = "table table-sm",
