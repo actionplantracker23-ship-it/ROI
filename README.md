@@ -1,21 +1,23 @@
-# Coût-efficacité des innovations en santé
+# Évaluation économique des projets de santé
 
-Outil en ligne (R Shiny) pour évaluer la **coût-efficacité** de n'importe quel projet
-d'innovation en santé. Chaque projet décrit librement son contexte et ses activités,
-renseigne ses coûts et ses résultats, et obtient :
+Outil en ligne (R Shiny) qui fonctionne pour **tous les projets de santé**. L'intervenant décrit
+son projet, répond à quelques questions (profil d'analyse), renseigne ses activités, et obtient :
 
-- le **coût par bénéficiaire** et le **coût par résultat** de chaque activité ;
-- le **coût par DALY évitée** du projet et de chaque activité ;
-- le **coût net** par DALY évitée (après économies générées) ;
-- l'**ICER** par rapport à la pratique actuelle ;
-- un **verdict** par rapport au seuil choisi (ou 0,5 × PIB par habitant) ;
-- une **analyse de sensibilité** et l'export du tableau (.csv).
+- **Coûts** : total nominal et actualisé, investissement, fonctionnement, coûts par année,
+  coût par bénéficiaire (total et par an), coût par résultat de chaque activité ;
+- **Coût-efficacité** : DALY évitées, ACER, ACER net, ΔC, ΔE, **ICER** face à la pratique actuelle
+  ou à l'absence d'intervention, dominance, bénéfice monétaire net (NMB) et sanitaire net (NHB),
+  verdict au seuil choisi ;
+- **Rendement financier** : économies, VAN, **ROI**, ratio bénéfice/coût, année de retour ;
+- **Incertitude** : tornade, simulation de Monte-Carlo, courbe d'acceptabilité, intervalles à 95 % ;
+- **Rapport imprimable** (PDF via le navigateur), export CSV, enregistrement du projet (.json).
 
-Rien n'est figé : pays, monnaie, PIB, seuil, nombre et nature des activités sont saisis
-par l'utilisateur. Un projet peut être enregistré (.json) puis rouvert.
+Les écrans s'adaptent aux réponses : DALY saisies directement ou calculées (YLL + YLD),
+économies, comparateur et analyse probabiliste ne s'affichent que si le projet en a besoin.
+Pays, monnaie, PIB, seuil et nombre d'activités sont libres.
 
-L'application tourne entièrement dans le navigateur grâce à
-[Shinylive](https://posit-dev.github.io/r-shinylive/) et est publiée sur GitHub Pages.
+Méthode : Drummond et al. (2015), guide OMS-CHOICE (2003), iDSI Reference Case (2016),
+Stinnett & Mullahy (1998). Détails et références dans l'onglet « Méthode et sources ».
 
 ## Structure
 
