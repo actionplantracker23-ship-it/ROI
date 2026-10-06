@@ -177,6 +177,8 @@ seuil_effectif <- function(seuil, pib_hab) {
 
 # Analyse de sensibilité univariée (tornade) : effet de chaque groupe de paramètres
 # sur le ratio de décision (ICER face au comparateur, ou ACER sans comparateur).
+# La colonne `parametre` contient une clé (couts, resultats, daly, attribution,
+# actualisation), traduite par l'interface.
 tornade <- function(p, a, comp, incertitude) {
   ratio_decision <- function(pp = p, aa = a) {
     r <- evaluer(pp, aa, comp)$ce
@@ -190,12 +192,12 @@ tornade <- function(p, a, comp, incertitude) {
     c(ratio_decision(aa = bas), ratio_decision(aa = haut))
   }
   lignes <- list(
-    "Coûts" = varier(c("investissement", "recurrent"), incertitude$couts),
-    "Résultats obtenus" = varier("resultats", incertitude$resultats),
-    "DALY par résultat" = varier("daly_par_resultat", incertitude$daly),
-    "Part attribuable" = c(ratio_decision(pp = modifyList(p, list(attribution = p$attribution * (1 - incertitude$resultats)))),
+    couts = varier(c("investissement", "recurrent"), incertitude$couts),
+    resultats = varier("resultats", incertitude$resultats),
+    daly = varier("daly_par_resultat", incertitude$daly),
+    attribution = c(ratio_decision(pp = modifyList(p, list(attribution = p$attribution * (1 - incertitude$resultats)))),
                            ratio_decision(pp = modifyList(p, list(attribution = min(1, p$attribution * (1 + incertitude$resultats)))))),
-    "Taux d'actualisation (0 % – 6 %)" = c(ratio_decision(pp = modifyList(p, list(taux_couts = 0, taux_effets = 0))),
+    actualisation = c(ratio_decision(pp = modifyList(p, list(taux_couts = 0, taux_effets = 0))),
                                            ratio_decision(pp = modifyList(p, list(taux_couts = 0.06, taux_effets = 0.06))))
   )
   d <- data.frame(parametre = names(lignes),
@@ -248,13 +250,18 @@ intervalle <- function(x, niveau = 0.95) {
 
 # ---- Exemple -------------------------------------------------------------------
 
-# Projet fictif illustrant comment remplir l'outil.
-exemple_activites <- function() {
+# Projet fictif illustrant comment remplir l'outil (libellés en français ou en anglais).
+exemple_activites <- function(langue = "fr") {
+  en <- identical(langue, "en")
   data.frame(
-    nom = c("Formation des agents communautaires au test rapide",
-            "Dépistage et traitement du paludisme à domicile",
-            "Suivi des femmes enceintes par SMS"),
-    unite = c("agents formés", "cas traités", "femmes suivies"),
+    nom = if (en) c("Training community health workers in rapid testing",
+                    "Home-based malaria testing and treatment",
+                    "SMS follow-up of pregnant women") else
+      c("Formation des agents communautaires au test rapide",
+        "Dépistage et traitement du paludisme à domicile",
+        "Suivi des femmes enceintes par SMS"),
+    unite = if (en) c("health workers trained", "cases treated", "women followed") else
+      c("agents formés", "cas traités", "femmes suivies"),
     investissement = c(4000000, 2500000, 1500000),
     recurrent = c(1000000, 6000000, 1200000),
     beneficiaires = c(60, 12000, 800),

@@ -1,4 +1,6 @@
-# Évaluation économique des projets de santé
+# Évaluation économique des projets de santé · Economic evaluation of health projects
+
+Interface bilingue français / anglais (bouton en haut à droite). Bilingual French / English interface (button at top right).
 
 Outil en ligne (R Shiny) qui fonctionne pour **tous les projets de santé**. L'intervenant décrit
 son projet, répond à quelques questions (profil d'analyse), renseigne ses activités, et obtient :
