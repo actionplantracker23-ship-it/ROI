@@ -3,108 +3,94 @@ library(testthat)
 
 source(file.path("..", "app", "calcul.R"))
 
-p1 <- list(annee_debut = 2026, duree = 1, taux_couts = 0, taux_effets = 0, attribution = 1, seuil = 500)
-act <- function(...) {
-  a <- data.frame(nom = "A", unite = "cas traités", investissement = 1000, recurrent = 0,
-                  beneficiaires = 50, resultats = 100, daly_par_resultat = 0.1,
-                  eco_sante = 3, eco_menages = 1, productivite = 1)
-  modifyList(a, list(...))
+p <- list(taux = 0.03, duree_vie = 5, seuil = NA, periode = "mois")
+ref <- function(estimations = FALSE, pp = p, b = reference_b()) {
+  evaluer(pp, reference_a(), b, reference_c(estimations = estimations))
 }
 
-test_that("coûts, coût par bénéficiaire et ACER", {
-  r <- evaluer(p1, act())
-  expect_equal(r$couts$total, 1000)
-  expect_equal(r$couts$cout_par_beneficiaire, 20)
-  expect_equal(r$daly, 10)
-  expect_equal(r$ce$acer, 100)
-  expect_equal(r$activites$cout_par_resultat, 10)
-  expect_equal(r$benefices$total, 500)
-  expect_equal(r$ce$acer_net, 50)
+test_that("chaîne de volumes de la couche B (diapositive Q5)", {
+  v <- couche_b(reference_b())$mensuel
+  expect_equal(unname(v[c("mau", "interactions", "escalades", "resolus")]), c(15000, 30000, 3000, 2250))
+  expect_true(is.na(v[["verifies"]]))
+  expect_equal(v[["atteints"]], 15000)
 })
 
-test_that("ICER, bénéfice net et décision face au comparateur", {
-  r <- evaluer(p1, act(), list(cout_annuel = 400, investissement = 0, daly_annuels = 4))
-  expect_equal(r$ce$delta_cout, 600)
-  expect_equal(r$ce$delta_daly, 6)
-  expect_equal(r$ce$icer, 100)
-  expect_equal(r$ce$nmb, 500 * 6 - 600)
-  expect_equal(r$ce$nhb, 6 - 600 / 500)
-  expect_equal(r$ce$quadrant, "nord_est")
-  expect_true(r$ce$cout_efficace)
+test_that("R mensuel connu = 10 000 / 12 ; indicateurs Q5 partiels", {
+  r <- ref()
+  R <- 10000 / 12
+  expect_equal(r$couts[["r"]], R)
+  expect_equal(r$unitaires["mau", "r"], R / 15000)          # OC5a ≈ 0,056
+  expect_equal(r$unitaires["interactions", "r"], R / 30000) # OC5b ≈ 0,028
+  expect_equal(r$unitaires["resolus", "r"], R / 2250)       # OC5d ≈ 0,37
+  expect_true(is.na(r$unitaires["verifies", "r"]))          # OC5c : A non mesuré
+  expect_true(is.na(r$oc5e))                                # C4 + C5 sans montant
+  expect_true(r$C$partiel)
+  expect_setequal(r$C$manquants, c("C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"))
 })
 
-test_that("dominance et quadrants", {
-  expect_equal(decision(-10, 5, 100)$quadrant, "dominante")
-  expect_true(decision(-10, 5, 100)$cout_efficace)
-  expect_equal(decision(10, -5, 100)$quadrant, "dominee")
-  expect_false(decision(10, -5, 100)$cout_efficace)
-  expect_equal(decision(-1000, -5, 100)$quadrant, "sud_ouest")
-  expect_true(decision(-1000, -5, 100)$cout_efficace)   # économise 200 par DALY perdue > seuil
-  expect_false(decision(1000, 5, 100)$cout_efficace)    # ICER 200 > seuil 100
-  expect_true(is.na(decision(1000, 5, NA)$cout_efficace))
-  r <- evaluer(p1, act(), list(cout_annuel = 2000, investissement = 0, daly_annuels = 4))
-  expect_equal(r$ce$quadrant, "dominante")
-  expect_true(is.na(r$ce$icer))
+test_that("période annuelle : mêmes coûts unitaires pour les flux", {
+  r <- ref(pp = modifyList(p, list(periode = "an")))
+  expect_equal(r$couts[["r"]], 10000)
+  expect_equal(r$v[["resolus"]], 27000)
+  expect_equal(r$unitaires["resolus", "r"], 10000 / 27000)
+  expect_equal(r$unitaires["interactions", "r"], 10000 / 360000)
 })
 
-test_that("rendement financier : ROI, ratio B/C, VAN, année de retour", {
-  r <- evaluer(p1, act(eco_sante = 15, eco_menages = 5, productivite = 0))
-  expect_equal(r$financier$van, 1000)
-  expect_equal(r$financier$roi, 1)
-  expect_equal(r$financier$ratio_bc, 2)
-  expect_equal(r$financier$annee_retour, 2026)
-  r2 <- evaluer(p1, act(eco_sante = 0, eco_menages = 0, productivite = 0))
-  expect_true(is.na(r2$financier$annee_retour))
-  expect_equal(r2$financier$roi, -1)
+test_that("couche A : 190 000 sur 5 ans à 3 % → facteur 4,58, 41 487 par an, 1,91 par suivi résolu", {
+  r <- ref(pp = modifyList(p, list(periode = "an")))
+  expect_equal(r$A$total, 190000)
+  expect_equal(round(r$A$facteur, 2), 4.58)
+  expect_equal(round(r$A$annuel), 41487)
+  expect_equal(round(r$unitaires["resolus", "economique"], 2), 1.91)
+  expect_equal(r$A$en_attente, "A3")
+  expect_equal(annualiser(100, 4, 0), 25)
 })
 
-test_that("actualisation séparée des coûts et des effets, attribution", {
-  p <- modifyList(p1, list(duree = 2, taux_couts = 0.1, taux_effets = 0, attribution = 0.5))
-  r <- evaluer(p, act(recurrent = 110))
-  expect_equal(r$couts$total, 1000 + 110 + 100)
-  expect_equal(r$couts$total_nominal, 1220)
-  expect_equal(r$couts$beneficiaires, 100)
-  expect_equal(r$daly, 2 * 100 * 0.5 * 0.1)
-  expect_equal(nrow(r$flux), 2)
+test_that("A mesuré et OC5e avec C4 + C5 chiffrés", {
+  b <- reference_b(); b$episodes_verifies <- 1000; b$beneficiaires_atteints <- 5000
+  pc <- reference_c(estimations = TRUE)
+  pc$montant[4:5] <- c(6000, 3000)
+  r <- evaluer(p, reference_a(), b, pc)
+  expect_equal(r$oc5e, (9000 / 12) / 5000)
+  expect_equal(r$unitaires["verifies", "r"], r$couts[["r"]] / 1000)
+  expect_true(r$C$gratuit_complet)
+  expect_equal(r$C$manquants, "C8")
+  expect_true(r$C$partiel)
 })
 
-test_that("calcul des DALY à partir des décès et épisodes évités", {
-  expect_equal(daly_par_resultat(0.01, 30, 1, 0.2, 0.1), 0.01 * 30 + 0.02)
+test_that("coûts variables et ventilation décaissé / non décaissé", {
+  r <- ref(estimations = TRUE)
+  annuel_c3 <- 0.0102 * 30000 * 12
+  expect_equal(r$C$postes$annuel[3], annuel_c3)
+  expect_equal(r$C$non_decaisse, 0.1667 * 3000 * 12)
+  expect_equal(r$C$decaisse + r$C$non_decaisse, r$C$r)
+  b <- reference_b(); b$activation <- 0.25
+  r2 <- ref(estimations = TRUE, b = b)
+  expect_equal(r2$C$postes$annuel[3], annuel_c3 / 2)
 })
 
-test_that("plusieurs activités et activité de support", {
-  a <- rbind(act(), act(nom = "Support", daly_par_resultat = 0, eco_sante = 0, eco_menages = 0, productivite = 0))
-  r <- evaluer(p1, a)
-  expect_equal(r$couts$total, 2000)
-  expect_equal(r$ce$acer, 200)
-  expect_true(is.na(r$activites$cout_par_daly[2]))
-  expect_equal(r$activites$part_cout, c(0.5, 0.5))
+test_that("sensibilité : activation 25 % double le coût par suivi résolu (R connu, fixe)", {
+  t <- sensibilite(p, reference_a(), reference_b(), reference_c(), list(), reference_sensibilite(),
+                   indicateur = "resolus", perspective = "r")
+  l <- t[t$parametre == "activation", ]
+  expect_equal(l$valeur_bas, 2 * l$base)
+  expect_equal(nrow(t), 6)
 })
 
-test_that("seuil effectif", {
-  expect_equal(seuil_effectif(NA, 1000)$valeur, 500)
-  expect_equal(seuil_effectif(800, 1000)$source, "saisi")
-  expect_true(is.na(seuil_effectif(NA, NA)$valeur))
-})
-
-test_that("incertitude : tornade, Monte-Carlo, acceptabilité", {
-  inc <- list(couts = 0.2, resultats = 0.2, daly = 0.3, economies = 0.3)
-  p <- list(annee_debut = 2026, duree = 3, taux_couts = 0.03, taux_effets = 0.03, attribution = 0.8, seuil = 250000)
-  t <- tornade(p, exemple_activites(), NULL, inc)
-  expect_equal(nrow(t), 5)
-  expect_true(all(is.finite(c(t$bas, t$haut))))
-  sim <- probabiliste(p, exemple_activites(), NULL, inc, n_sim = 2000)
-  expect_equal(nrow(sim), 2000)
-  base <- evaluer(p, exemple_activites())
-  expect_lt(abs(median(sim$delta_cout) / base$couts$total - 1), 0.05)
-  ac <- acceptabilite(sim, c(0, 1e12))
-  expect_equal(ac, c(0, 1))
-  sans_incertitude <- probabiliste(p, exemple_activites(), NULL, list(couts = 0, resultats = 0, daly = 0, economies = 0), n_sim = 10)
-  expect_equal(sans_incertitude$delta_cout[1], base$couts$total)
-  expect_equal(sans_incertitude$delta_daly[1], base$daly)
-})
-
-test_that("valeurs manquantes traitées comme zéro", {
-  a <- act(); a$eco_sante <- NA
-  expect_equal(evaluer(p1, a)$benefices$eco_sante, 0)
+test_that("niveau santé : RCEI, bénéfice net, ROI, verdict", {
+  s <- list(compl_pour_1000 = 10, daly_par_compl = 2, deces_pour_1000 = 1, economie_par_compl = 50,
+            cout_comparateur = 1200)
+  r <- evaluer(modifyList(p, list(seuil = 500)), reference_a(), reference_b(), reference_c(), s)
+  expect_equal(r$sante$daly, 2250 * 10 / 1000 * 2)
+  n <- r$niveau3$r
+  dC <- 10000 / 12 - 100
+  expect_equal(n$delta_cout, dC)
+  expect_equal(n$rcei_daly, dC / 45)
+  expect_equal(n$rcei_deces, dC / 2.25)
+  expect_equal(n$nmb, 500 * 45 - dC)
+  expect_equal(verdict_daly(n$rcei_daly, 500), "cout_efficace")
+  expect_equal(verdict_daly(900, 500), "non_cout_efficace")
+  expect_equal(verdict_daly(-1, 500), "dominant")
+  expect_equal(verdict_daly(100, NA), "sans_seuil")
+  expect_true(is.na(ref()$niveau3$r$rcei_daly))
 })
