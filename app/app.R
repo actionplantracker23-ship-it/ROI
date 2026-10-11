@@ -75,6 +75,9 @@ body { background: var(--papier); }
 .navbar-brand { font-weight: 600; letter-spacing: .02em; color: var(--sarcelle) !important; }
 .nav-link { font-size: 1rem; padding-left: .5rem !important; padding-right: .5rem !important; }
 .nav-link.active { color: var(--sarcelle) !important; border-bottom: 2px solid var(--or); }
+.version { color: #9aa6a9; font-size: .85rem; margin-right: .3rem; }
+.donnees { border-left: 4px solid var(--couche-c-entete); }
+.donnees td { padding: .2rem .8rem .2rem 0; }
 #bouton_langue { border-radius: 20px; padding: .2rem .9rem; margin-left: .5rem; }
 h1, h2, h3, h4 { color: var(--sarcelle); font-weight: 600; }
 h3.section { margin: 2rem 0 1rem; padding-bottom: .4rem; border-bottom: 1px solid #e3d9c6; }
@@ -210,6 +213,8 @@ entete_c <- fluidRow(class = "ligne-entete", style = "color:#fff",
   column(1, "Code"), column(3, tr("Ligne", "Line")), column(2, tr("Montant (annuel ou unitaire)", "Amount (annual or unit)")),
   column(2, tr("Base", "Basis")), column(2, tr("Statut", "Status")), column(1, tr("Nature", "Type")),
   column(1, tr("Gratuit", "Free")))
+
+VERSION <- "v2026.10.11 · Q5"
 
 police <- font_collection("EB Garamond", "Garamond", "Georgia", "serif")
 
@@ -361,6 +366,7 @@ ui <- page_navbar(
           div(class = "corps", h4(tr("Coût récurrent annuel à l'échelle", "Recurrent operating cost, annual at scale")),
               p("R = C1 + C2 + … + C9")))
     ),
+    uiOutput("donnees_chargees"),
     h3(class = "section", tr("Trois niveaux de coût-efficacité", "Three levels of cost-effectiveness")),
     layout_columns(
       col_widths = c(4, 4, 4),
@@ -558,6 +564,7 @@ ui <- page_navbar(
   ),
 
   nav_spacer(),
+  nav_item(span(class = "version", title = "Version", VERSION)),
   nav_item(tags$button(id = "bouton_langue", type = "button", class = "btn btn-sm btn-outline-primary",
                        onclick = "basculerLangue()", tr("English", "Français")))
 )
@@ -937,6 +944,36 @@ server <- function(input, output, session) {
       c("Paramètre", "Bas", "Résultat", "Haut", "Résultat", "Bas / base", "Haut / base")
     d
   }, striped = TRUE, width = "100%")
+
+  # -- Accueil : données actuellement chargées --
+
+  output$donnees_chargees <- renderUI({
+    r <- res()
+    vm <- r$volumes$mensuel
+    connus <- r$C$postes[!is.na(r$C$postes$annuel), ]
+    cellule <- function(lib, val) tags$tr(tags$td(lib), tags$td(strong(val)))
+    card(class = "donnees mb-3",
+      card_header(paste(L("Données chargées :", "Data loaded:"), if (nzchar(txt("nom"))) txt("nom") else L("projet sans nom", "unnamed project"))),
+      layout_columns(
+        col_widths = c(4, 4, 4),
+        div(strong(L("Couche A", "Layer A")), tags$table(
+          lapply(seq_len(nrow(pa())), function(k) cellule(paste(pa()$code[k], pa()$libelle[k]),
+            if (is.na(pa()$montant[k]) || pa()$statut[k] == "attente") L("en attente", "pending") else fmt(pa()$montant[k]))),
+          cellule(L("Total", "Total"), fmt(r$A$total)))),
+        div(strong(L("Couche B (par mois)", "Layer B (per month)")), tags$table(
+          cellule("B1", fmt(num("b_beneficiaires"))), cellule("B2", fmt(num("b_asc"))),
+          cellule("B3", paste0(fmt(num("b_activation")), "%")), cellule("B4", fmt(num("b_interactions"), 1)),
+          cellule("B5", paste0(fmt(num("b_escalade")), "%")), cellule("B6", paste0(fmt(num("b_completion")), "%")),
+          cellule("MAU · I · E · F", paste(fmt(vm[["mau"]]), fmt(vm[["interactions"]]), fmt(vm[["escalades"]]), fmt(vm[["resolus"]]), sep = " · ")))),
+        div(strong(L("Couche C et résultat", "Layer C and result")), tags$table(
+          lapply(seq_len(nrow(connus)), function(k) cellule(paste(connus$code[k], connus$libelle[k]), fmt(connus$annuel[k]))),
+          cellule(L("Lignes manquantes", "Missing lines"), if (length(r$C$manquants)) paste(r$C$manquants, collapse = ", ") else "—"),
+          cellule(L("OC5d par suivi résolu", "OC5d per resolved follow-up"), argent(r$unitaires["resolus", "r"])),
+          cellule(L("avec A annualisé", "with annualised A"), argent(r$unitaires["resolus", "economique"]))),
+          actionButton("voir_indicateurs", L("Voir les indicateurs →", "See the indicators →"), class = "btn-primary btn-sm mt-2"))
+      ))
+  })
+  observeEvent(input$voir_indicateurs, nav_select("onglets", "resultats"))
 
   # -- Indicateurs --
 
