@@ -1,35 +1,37 @@
-# Coût-efficacité des innovations · Cost-effectiveness of innovations
+# Évaluation économique des projets de santé · Economic evaluation of health projects
 
-Interface bilingue français / anglais (bouton en haut à droite). Bilingual French / English interface.
+Interface bilingue français / anglais (bouton en haut à droite). Bilingual French / English interface (button at top right).
 
-Outil R Shiny structuré en trois couches, publié sur GitHub Pages avec Shinylive :
+Chaque activité a un code, un **statut** (connu, estimé, en attente, hors budget) et se supprime d'un clic.
+Les activités en attente sont listées mais exclues des totaux : l'estimation est alors signalée « partielle ».
+L'exemple chargé par défaut reprend les **données de l'innovation** (triage numérique, scénario central
+Phase 3 : couches A, B et C du modèle de coûts).
 
-| Couche | Rôle | Contenu |
-|---|---|---|
-| **A** | Investissement, exclu des coûts unitaires | Développement non récurrent ; annualisé (OMS-CHOICE) pour la vue économique |
-| **B** | Volumes (dénominateurs) | MAU = B1 × B3 · I = MAU × B4 · E = I × B5 · F = E × B6 ; A (épisodes avec action vérifiée) mesuré séparément |
-| **C** | Coût récurrent (numérateur) | R = C1 + … + C9 pour la période, hors A ; statut par ligne (connu, estimé, en attente, hors budget) ; estimation « partielle » si une ligne manque |
+Outil en ligne (R Shiny) qui fonctionne pour **tous les projets de santé**. L'intervenant décrit
+son projet, répond à quelques questions (profil d'analyse), renseigne ses activités, et obtient :
 
-**Indicateurs Q5** : OC5a = R / MAU · OC5b = R / I · OC5c = R / A · OC5d = R / F ·
-OC5e = (C4 + C5) / bénéficiaires atteints (composante de R, non additive).
+- **Coûts** : total nominal et actualisé, investissement, fonctionnement, coûts par année,
+  coût par bénéficiaire (total et par an), coût par résultat de chaque activité ;
+- **Coût-efficacité** : DALY évitées, ACER, ACER net, ΔC, ΔE, **ICER** face à la pratique actuelle
+  ou à l'absence d'intervention, dominance, bénéfice monétaire net (NMB) et sanitaire net (NHB),
+  verdict au seuil choisi ;
+- **Rendement financier** : économies, VAN, **ROI**, ratio bénéfice/coût, année de retour ;
+- **Incertitude** : tornade, simulation de Monte-Carlo, courbe d'acceptabilité, intervalles à 95 % ;
+- **Rapport imprimable** (PDF via le navigateur), export CSV, enregistrement du projet (.json).
 
-**Trois vues de coût** : lignes connues (plancher) · R (Q5) · R + A annualisé (économique).
+Les écrans s'adaptent aux réponses : DALY saisies directement ou calculées (YLL + YLD),
+économies, comparateur et analyse probabiliste ne s'affichent que si le projet en a besoin.
+Pays, monnaie, PIB, seuil et nombre d'activités sont libres.
 
-**Niveau santé** : RCEI = (coût intervention − coût comparateur) / effet incrémental (DALY, décès),
-bénéfice monétaire net, ROI. **Sensibilité univariée** sur B3, B4, B5, B6, durée de vie de A et
-niveau des coûts C (tornade). Rapport imprimable, export CSV, enregistrement du projet (.json).
-
-Les données de l'innovation (Phase 3, scénario central) sont chargées par défaut ; une variante
-remplace les lignes C en attente par des estimations indicatives à confirmer.
-
-Méthode : Drummond et al. (2015), OMS-CHOICE (2003), iDSI Reference Case (2016).
+Méthode : Drummond et al. (2015), guide OMS-CHOICE (2003), iDSI Reference Case (2016),
+Stinnett & Mullahy (1998). Détails et références dans l'onglet « Méthode et sources ».
 
 ## Structure
 
 ```
 app/
   app.R      interface Shiny
-  calcul.R   moteur : couches A, B, C, indicateurs Q5, santé, sensibilité (sans Shiny)
+  calcul.R   moteur de calcul coût-efficacité (sans dépendance à Shiny)
 tests/
   test-calcul.R   tests du moteur (testthat)
   run.R
