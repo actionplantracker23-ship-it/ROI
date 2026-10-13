@@ -2,6 +2,10 @@
 
 Interface bilingue français / anglais (bouton en haut à droite). Bilingual French / English interface (button at top right).
 
+**Dès l'accueil, on choisit le type d'analyse** : analyse des coûts simple, ROI, coût-efficacité
+ou analyse complète. L'outil n'affiche ensuite que les étapes et les champs utiles (pas de DALY à
+saisir pour une simple analyse des coûts, par exemple).
+
 Chaque activité a un code, un **statut** (connu, estimé, en attente, hors budget) et se supprime d'un clic.
 Les activités en attente sont listées mais exclues des totaux : l'estimation est alors signalée « partielle ».
 L'exemple chargé par défaut reprend les **données de l'innovation** (triage numérique, scénario central

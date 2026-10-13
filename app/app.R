@@ -97,6 +97,10 @@ h3.section { margin: 2rem 0 1rem; padding-bottom: .4rem; border-bottom: 1px soli
   font-size: 1.2rem; margin-bottom: .7rem; font-variant-numeric: lining-nums; }
 .etape h4 { font-size: 1.3rem; }
 .question { padding: 1.2rem 1.4rem; border-left: 4px solid var(--or); }
+.choix-type { border-top: 4px solid var(--or); }
+.choix-type .radio { padding: .7rem .9rem; margin-bottom: .5rem; border: 1px solid #e3dccf; border-radius: 10px; background: #fff; }
+.choix-type .radio:has(input:checked) { border-color: var(--sarcelle); box-shadow: 0 0 0 2px rgba(31,95,158,.15); }
+.choix-type .radio label { width: 100%; font-size: 1.1rem; }
 .question .shiny-options-group { margin-top: .4rem; }
 .question .control-label { font-size: 1.15rem; font-weight: 600; color: var(--sarcelle); }
 .activite { border-left: 4px solid var(--or); }
@@ -374,22 +378,43 @@ ui <- page_navbar(
     tr("Accueil", "Home"), value = "accueil",
     div(class = "hero",
         h1(tr("Votre projet de santé vaut-il son coût ?", "Is your health project worth its cost?")),
-        p(tr(paste("Un outil pour tous les projets : décrivez votre projet, répondez à quelques questions,",
-                   "renseignez vos activités. L'outil calcule vos coûts, le coût par bénéficiaire, le ratio",
-                   "coût-efficacité (ACER et ICER), le bénéfice net, le ROI, et vous dit si le projet est coût-efficace."),
-             paste("One tool for every project: describe your project, answer a few questions and enter your",
-                   "activities. The tool calculates your costs, cost per beneficiary, cost-effectiveness ratios",
-                   "(ACER and ICER), net benefit and ROI, and tells you whether the project is cost-effective."))),
-        actionButton("demarrer_vide", tr("Commencer mon projet", "Start my project"), class = "btn-or"),
-        actionButton("demarrer_exemple", tr("Voir un exemple", "See an example"), class = "btn-blanc")),
+        p(tr(paste("Choisissez d'abord votre type d'analyse : une simple analyse des coûts, un ROI, une analyse",
+                   "coût-efficacité ou une analyse complète. L'outil ne vous demande ensuite que les informations utiles."),
+             paste("First choose your type of analysis: a simple cost analysis, an ROI, a cost-effectiveness",
+                   "analysis or a full analysis. The tool then only asks for the information it needs."))),
+        ),
+    card(
+      class = "choix-type mb-4",
+      card_header(tr("Étape 1 · Quel type d'analyse voulez-vous faire\u00a0?", "Step 1 · What kind of analysis do you want?")),
+      p(class = "aide", tr("L'outil n'affichera que les champs utiles à ce choix. Vous pourrez le changer plus tard.",
+                           "The tool will only show the fields needed for this choice. You can change it later.")),
+      radioButtons("type_analyse", NULL, width = "100%", selected = "couts",
+        choiceNames = list(
+          tagList(strong(tr("Analyse des coûts simple", "Simple cost analysis")), br(),
+                  span(class = "aide", tr("Coût total, coût par bénéficiaire et par résultat. Ni DALY ni économies à saisir.",
+                                          "Total cost, cost per beneficiary and per output. No DALYs or savings to enter."))),
+          tagList(strong(tr("ROI — retour sur investissement", "ROI — return on investment")), br(),
+                  span(class = "aide", tr("Coûts + économies générées (soins évités, ménages, productivité) → ROI, VAN, ratio bénéfice/coût.",
+                                          "Costs + savings generated (care averted, households, productivity) → ROI, NPV, benefit-cost ratio."))),
+          tagList(strong(tr("Coût-efficacité", "Cost-effectiveness")), br(),
+                  span(class = "aide", tr("Coûts + effets de santé en DALY → coût par DALY évitée, ICER, verdict au seuil.",
+                                          "Costs + health effects in DALYs → cost per DALY averted, ICER, verdict at the threshold."))),
+          tagList(strong(tr("Analyse complète (personnalisée)", "Full analysis (custom)")), br(),
+                  span(class = "aide", tr("Vous choisissez vous-même chaque élément : DALY, économies, comparateur, incertitude.",
+                                          "You choose each element yourself: DALYs, savings, comparator, uncertainty.")))),
+        choiceValues = c("couts", "roi", "ce", "complet")),
+      div(actionButton("demarrer_vide", tr("Commencer mon projet →", "Start my project →"), class = "btn-or"),
+          actionButton("demarrer_exemple", tr("Voir l'exemple (données de l'innovation)", "See the example (innovation data)"),
+                       class = "btn-outline-primary ms-2"))
+    ),
     layout_column_wrap(
       width = "220px",
-      card(div(class = "etape", div(class = "num", "1"), h4(tr("Le projet", "The project")),
-               p(tr("Pays, monnaie, durée, seuil : tout se saisit librement.",
-                    "Country, currency, duration, threshold: everything is entered freely.")))),
-      card(div(class = "etape", div(class = "num", "2"), h4(tr("Le profil", "The profile")),
-               p(tr("Quelques questions pour adapter l'analyse à votre projet.",
-                    "A few questions to tailor the analysis to your project.")))),
+      card(div(class = "etape", div(class = "num", "1"), h4(tr("Le type d'analyse", "The type of analysis")),
+               p(tr("Coûts simples, ROI, coût-efficacité ou analyse complète.",
+                    "Simple costs, ROI, cost-effectiveness or full analysis.")))),
+      card(div(class = "etape", div(class = "num", "2"), h4(tr("Le projet", "The project")),
+               p(tr("Pays, monnaie, durée : tout se saisit librement.",
+                    "Country, currency, duration: everything is entered freely.")))),
       card(div(class = "etape", div(class = "num", "3"), h4(tr("Les activités", "The activities")),
                p(tr("Coûts, bénéficiaires et résultats de chaque activité.",
                     "Costs, beneficiaries and outputs of each activity.")))),
@@ -400,7 +425,7 @@ ui <- page_navbar(
   ),
 
   nav_panel(
-    tr("1 · Projet", "1 · Project"), value = "projet",
+    tr("Projet", "Project"), value = "projet",
     layout_columns(
       col_widths = c(6, 6),
       card(
@@ -425,19 +450,23 @@ ui <- page_navbar(
           numericInput("duree", tr("Durée de l'analyse (années)", "Analysis period (years)"), 3, min = 1, max = 30),
           numericInput("taux_couts", tr("Actualisation des coûts (%)", "Discount rate, costs (%)"), 3,
                        min = 0, max = 20, step = 0.5),
-          numericInput("taux_effets", tr("Actualisation des effets (%)", "Discount rate, effects (%)"), 3,
-                       min = 0, max = 20, step = 0.5),
-          numericInput("attribution", tr("Part de l'effet due au projet (%)", "Share of effect due to the project (%)"),
-                       100, min = 0, max = 100)
+          conditionalPanel("input.type_analyse == 'ce' || input.type_analyse == 'complet'",
+            numericInput("taux_effets", tr("Actualisation des effets (%)", "Discount rate, effects (%)"), 3,
+                         min = 0, max = 20, step = 0.5)),
+          conditionalPanel("input.type_analyse != 'couts'",
+            numericInput("attribution", tr("Part de l'effet due au projet (%)", "Share of effect due to the project (%)"),
+                         100, min = 0, max = 100))
         ),
         div(class = "aide mb-3",
             tr("3 % est le taux de référence de l'OMS et de l'iDSI. La part de l'effet due au projet retire ce qui serait arrivé sans lui ou grâce à d'autres acteurs.",
                "3% is the WHO and iDSI reference rate. The share of effect due to the project removes what would have happened without it or thanks to other actors.")),
         layout_column_wrap(
           width = "180px",
-          numericInput("pib_hab", tr("PIB par habitant (monnaie du projet)", "GDP per capita (project currency)"),
-                       pays_defauts$BF$pib_hab, min = 0),
-          numericInput("seuil", tr("Seuil par DALY évitée", "Threshold per DALY averted"), NA, min = 0),
+          conditionalPanel("input.type_analyse == 'ce' || input.type_analyse == 'complet'",
+            numericInput("pib_hab", tr("PIB par habitant (monnaie du projet)", "GDP per capita (project currency)"),
+                         pays_defauts$BF$pib_hab, min = 0)),
+          conditionalPanel("input.type_analyse == 'ce' || input.type_analyse == 'complet'",
+            numericInput("seuil", tr("Seuil par DALY évitée", "Threshold per DALY averted"), NA, min = 0)),
           numericInput("taux_change", tr("Monnaie du projet pour 1 USD", "Project currency per 1 USD"),
                        pays_defauts$BF$taux_change, min = 0)
         ),
@@ -459,7 +488,7 @@ ui <- page_navbar(
   ),
 
   nav_panel(
-    tr("2 · Profil", "2 · Profile"), value = "profil",
+    tr("Profil", "Profile"), value = "profil",
     p(class = "aide", tr("Vos réponses adaptent les écrans suivants à votre projet.",
                          "Your answers tailor the next screens to your project.")),
     layout_column_wrap(
@@ -503,7 +532,7 @@ ui <- page_navbar(
   ),
 
   nav_panel(
-    tr("3 · Activités", "3 · Activities"), value = "activites",
+    tr("Activités", "Activities"), value = "activites",
     card(
       card_header(tr("Activités du projet", "Project activities")),
       p(tr("Ajoutez toutes les activités du projet. Montants dans la monnaie du projet ; « / an » = chaque année de l'analyse.",
@@ -518,7 +547,7 @@ ui <- page_navbar(
   ),
 
   nav_panel(
-    tr("4 · Comparateur", "4 · Comparator"), value = "comparateur",
+    tr("Comparateur", "Comparator"), value = "comparateur",
     card(
       card_header(tr("Pratique actuelle (sans le projet)", "Current practice (without the project)")),
       p(tr("Ce que coûte et produit aujourd'hui l'alternative à laquelle on compare le projet.",
@@ -536,7 +565,7 @@ ui <- page_navbar(
   ),
 
   nav_panel(
-    tr("5 · Incertitude", "5 · Uncertainty"), value = "incertitude",
+    tr("Incertitude", "Uncertainty"), value = "incertitude",
     card(
       card_header(tr("Marges d'incertitude", "Uncertainty margins")),
       p(tr("De combien vos chiffres pourraient-ils varier ? Ces marges servent à l'analyse de sensibilité et à la simulation de Monte-Carlo.",
@@ -614,7 +643,7 @@ ui <- page_navbar(
   ),
 
   nav_spacer(),
-  nav_item(span(style = "color:#9aa6a9; font-size:.85rem; margin-right:.3rem;", "v2026.10.12")),
+  nav_item(span(style = "color:#9aa6a9; font-size:.85rem; margin-right:.3rem;", "v2026.10.13")),
   nav_item(tags$button(id = "bouton_langue", type = "button", class = "btn btn-sm btn-outline-primary",
                        onclick = "basculerLangue()", tr("English", "Français")))
 )
@@ -768,8 +797,8 @@ server <- function(input, output, session) {
     annee_debut = num("annee_debut", 2026),
     duree = max(1, round(num("duree", 1))),
     taux_couts = num("taux_couts") / 100,
-    taux_effets = num("taux_effets") / 100,
-    attribution = num("attribution", 100) / 100,
+    taux_effets = (if (type() %in% c("ce", "complet")) num("taux_effets") else num("taux_couts")) / 100,
+    attribution = if (type() == "couts") 1 else num("attribution", 100) / 100,
     seuil = seuil()$valeur
   ))
 
@@ -797,7 +826,24 @@ server <- function(input, output, session) {
 
   # -- Navigation et étapes optionnelles --
 
+  # Type d'analyse choisi à l'entrée : il règle le profil et masque ce qui est inutile.
+  profils_types <- list(
+    couts = list(effets_sante = "non", economies = "non", comparer = "non", incertitude_on = "non"),
+    roi = list(effets_sante = "non", economies = "oui", comparer = "non", incertitude_on = "non"),
+    ce = list(effets_sante = "oui", economies = "non", comparer = "oui", incertitude_on = "non")
+  )
+  type <- reactive(input$type_analyse %||% "couts")
+  profil_visible <- reactive(type() %in% c("ce", "complet"))
+  garder_profil <- FALSE  # à l'ouverture d'un projet : garder son profil enregistré
+
+  observeEvent(input$type_analyse, {
+    if (garder_profil) { garder_profil <<- FALSE; return() }
+    pr <- profils_types[[input$type_analyse]]
+    for (id in names(pr)) updateRadioButtons(session, id, selected = pr[[id]])
+  }, ignoreInit = TRUE)
+
   observe({
+    if (profil_visible()) nav_show("onglets", "profil") else nav_hide("onglets", "profil")
     if (oui("comparer")) nav_show("onglets", "comparateur") else nav_hide("onglets", "comparateur")
     if (oui("incertitude_on")) nav_show("onglets", "incertitude") else nav_hide("onglets", "incertitude")
   })
@@ -805,10 +851,10 @@ server <- function(input, output, session) {
   aller <- function(onglet) nav_select("onglets", onglet)
   apres_activites <- function() if (oui("comparer")) "comparateur" else if (oui("incertitude_on")) "incertitude" else "resultats"
   observeEvent(input$retour_accueil, aller("accueil"))
-  observeEvent(input$vers_profil, aller("profil"))
+  observeEvent(input$vers_profil, aller(if (profil_visible()) "profil" else "activites"))
   observeEvent(input$retour_projet, aller("projet"))
   observeEvent(input$vers_activites, aller("activites"))
-  observeEvent(input$retour_profil, aller("profil"))
+  observeEvent(input$retour_profil, aller(if (profil_visible()) "profil" else "projet"))
   observeEvent(input$vers_suite, aller(apres_activites()))
   observeEvent(input$retour_activites, aller("activites"))
   observeEvent(input$vers_suite2, aller(if (oui("incertitude_on")) "incertitude" else "resultats"))
@@ -823,7 +869,7 @@ server <- function(input, output, session) {
   champs_nombre <- c("annee_debut", "duree", "taux_couts", "taux_effets", "attribution", "pib_hab", "seuil",
                      "taux_change", "comp_investissement", "comp_cout", "comp_daly",
                      "inc_couts", "inc_resultats", "inc_daly", "inc_economies")
-  champs_profil <- c("effets_sante", "mode_daly", "economies", "comparer", "incertitude_on")
+  champs_profil <- c("type_analyse", "effets_sante", "mode_daly", "economies", "comparer", "incertitude_on")
 
   appliquer <- function(textes = list(), nombres = list(), profil = list(), acts = NULL, pays_choix = NULL) {
     if (!is.null(pays_choix)) {
@@ -836,6 +882,8 @@ server <- function(input, output, session) {
       if (id == "description") updateTextAreaInput(session, id, value = v) else updateTextInput(session, id, value = v)
     }
     for (id in names(nombres)) updateNumericInput(session, id, value = nombres[[id]] %||% NA)
+    if (!is.null(profil$type_analyse) && !identical(profil$type_analyse, isolate(input$type_analyse)))
+      garder_profil <<- TRUE
     for (id in names(profil)) updateRadioButtons(session, id, selected = profil[[id]])
     if (!is.null(acts)) remplir_activites(acts)
   }
@@ -862,8 +910,8 @@ server <- function(input, output, session) {
           "et supervision clinique (C8) hors budget.")),
       nombres = list(duree = 5, taux_couts = 3, taux_effets = 3, attribution = 100, pib_hab = NA,
                      seuil = NA, taux_change = NA, comp_investissement = 0, comp_cout = 0, comp_daly = 0),
-      profil = list(effets_sante = "non", mode_daly = "direct", economies = "non", comparer = "non",
-                    incertitude_on = "non"),
+      profil = list(type_analyse = "couts", effets_sante = "non", mode_daly = "direct", economies = "non",
+                    comparer = "non", incertitude_on = "non"),
       acts = a, pays_choix = "autre"
     )
   }
@@ -879,8 +927,8 @@ server <- function(input, output, session) {
       nombres = list(duree = 3, taux_couts = 3, taux_effets = 3, attribution = 100,
                      pib_hab = d$pib_hab %||% NA, seuil = NA, taux_change = d$taux_change %||% NA,
                      comp_investissement = 0, comp_cout = 0, comp_daly = 0),
-      profil = list(effets_sante = "oui", mode_daly = "direct", economies = "non", comparer = "non",
-                    incertitude_on = "non")
+      profil = c(list(mode_daly = "direct"),
+                 profils_types[[type()]] %||% list(effets_sante = "oui", economies = "non", comparer = "non", incertitude_on = "non"))
     )
     vider_activites()
     ajouter_activite()
@@ -916,7 +964,9 @@ server <- function(input, output, session) {
       code <- if (length(trouve) > 0) trouve[1] else "autre"
       if (code != "autre") projet$textes$pays <- ""
     }
-    appliquer(projet$textes %||% list(), projet$nombres %||% list(), projet$profil %||% list(), projet$activites,
+    profil <- projet$profil %||% list()
+    if (is.null(profil$type_analyse)) profil$type_analyse <- "complet"  # anciens fichiers
+    appliquer(projet$textes %||% list(), projet$nombres %||% list(), profil, projet$activites,
               pays_choix = code)
     showNotification(L("Projet ouvert.", "Project opened."), type = "message")
   })
@@ -958,6 +1008,19 @@ server <- function(input, output, session) {
                  if (nzchar(pays_nom())) paste(" ·", pays_nom()))
     partiel <- if (r$partiel) div(class = "detail", span(class = "partiel", L("Estimation partielle", "Partial estimate")), " — ",
       L("lignes en attente ou hors budget non chiffrées : ", "pending or uncosted not-in-budget lines: "), paste(r$manquantes, collapse = ", "))
+    if (!oui("effets_sante") && oui("economies")) {
+      f <- r$financier
+      couleur_roi <- if (is.na(f$roi)) couleurs$gris else if (f$roi >= 0) couleurs$vert else couleurs$or
+      return(div(class = "verdict", style = fond(couleur_roi), titre,
+                 div(class = "chiffre", L("ROI ", "ROI "), fmt_pct(f$roi)),
+                 div(class = "phrase", paste0(L("Valeur actuelle nette : ", "Net present value: "), argent(f$van),
+                                              L(" · ratio bénéfice/coût : ", " · benefit-cost ratio: "), fmt(f$ratio_bc, 2))),
+                 div(class = "detail", paste0(L("Économies actualisées : ", "Discounted savings: "), argent(r$benefices$total),
+                                              L(" · coûts actualisés : ", " · discounted costs: "), argent(r$couts$total),
+                                              L(" · année de retour : ", " · payback year: "),
+                                              if (is.na(f$annee_retour)) L("non atteinte", "not reached") else f$annee_retour)),
+                 partiel))
+    }
     if (!oui("effets_sante")) {
       par_resultat <- !is.na(r$couts$cout_par_resultat)
       return(div(class = "verdict", style = fond(couleurs$sarcelle), titre,
