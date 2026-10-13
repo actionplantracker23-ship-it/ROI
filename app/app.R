@@ -643,7 +643,7 @@ ui <- page_navbar(
   ),
 
   nav_spacer(),
-  nav_item(span(style = "color:#9aa6a9; font-size:.85rem; margin-right:.3rem;", "v2026.10.13.2")),
+  nav_item(span(style = "color:#9aa6a9; font-size:.85rem; margin-right:.3rem;", "v2026.10.13.3")),
   nav_item(tags$button(id = "bouton_langue", type = "button", class = "btn btn-sm btn-outline-primary",
                        onclick = "basculerLangue()", tr("English", "Français")))
 )
@@ -1007,8 +1007,7 @@ server <- function(input, output, session) {
     titre <- div(class = "detail", if (nzchar(txt("nom"))) txt("nom") else L("Votre projet", "Your project"),
                  if (nzchar(pays_nom())) paste(" ·", pays_nom()))
     partiel <- if (r$partiel) div(class = "detail", span(class = "partiel", L("Estimation partielle", "Partial estimate")), L(" : ", ": "),
-      paste0(L("lignes en attente ou hors budget non chiffrées (", "pending or uncosted not-in-budget lines ("),
-             paste(r$manquantes, collapse = ", "), ")"))
+      L("lignes en attente ou hors budget non chiffrées.", "pending or uncosted not-in-budget lines."))
     if (!oui("effets_sante") && oui("economies")) {
       f <- r$financier
       couleur_roi <- if (is.na(f$roi)) couleurs$gris else if (f$roi >= 0) couleurs$vert else couleurs$or
