@@ -88,7 +88,7 @@ decision <- function(dC, dE, seuil) {
 
 # p : list(annee_debut, duree, taux_couts, taux_effets, attribution, seuil)
 # a : data.frame des activités (voir colonnes_activites, + nom, unite)
-# comp : list(cout_annuel, investissement, daly_annuels) — pratique actuelle ; NULL = aucune intervention
+# comp : list(cout_annuel, investissement, daly_annuels) : pratique actuelle ; NULL = aucune intervention
 evaluer <- function(p, a, comp = NULL) {
   a <- completer_activites(a)
   manquantes <- lignes_manquantes(a)
@@ -288,12 +288,12 @@ exemple_activites <- function(langue = "fr") {
   en <- identical(langue, "en")
   noms <- if (en) c(
     "Phase 1 MVP build, committed", "AI-Triage public good, decision requested", "Partner co-funding, not stated",
-    "Phase 3 build and handover, indicative", "Digital triage service — activity volumes (layer B)",
+    "Phase 3 build and handover, indicative", "Digital triage service: activity volumes (layer B)",
     "Platform subscription (Turn.io)", "WhatsApp conversation fees", "SMS fees, likely to dominate",
     "Inbound voice / toll-free", "Callbacks and reverse billing", "AI inference (token)",
     "CHW time, measured during UAT", "Clinical supervision and helpdesk", "Technical support and usage allowance") else c(
     "Construction du MVP Phase 1, engagée", "AI-Triage bien public, décision demandée", "Cofinancement partenaires, non précisé",
-    "Construction et transfert Phase 3, indicatif", "Service de triage numérique — volumes d'activité (couche B)",
+    "Construction et transfert Phase 3, indicatif", "Service de triage numérique : volumes d'activité (couche B)",
     "Abonnement plateforme (Turn.io)", "Frais de conversation WhatsApp", "Frais SMS, probablement dominants",
     "Voix entrante / numéro gratuit", "Rappels et facturation inversée", "Inférence IA (tokens)",
     "Temps des ASC, mesuré pendant l'UAT", "Supervision clinique et helpdesk", "Support technique et forfait d'usage")

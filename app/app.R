@@ -278,17 +278,17 @@ methode_fr <- div(
     "d'au moins deux options, les effets étant mesurés en unités de santé (cas, décès, DALY) (Drummond et al., 2015)."),
   h4("Formules utilisées"),
   p(strong("Coût actualisé : "), formule("C = Σ Cₜ / (1 + r)ᵗ⁻¹"),
-    " — année 1 non actualisée ; coûts et effets actualisés (3 % par défaut, OMS / iDSI)."),
+    " : année 1 non actualisée ; coûts et effets actualisés (3 % par défaut, OMS / iDSI)."),
   p(strong("Coût par bénéficiaire : "), formule("C / nombre de bénéficiaires")),
-  p(strong("Ratio coût-efficacité moyen : "), formule("ACER = C / E"), " — descriptif, pas un critère de décision."),
+  p(strong("Ratio coût-efficacité moyen : "), formule("ACER = C / E"), " : descriptif, pas un critère de décision."),
   p(strong("Ratio coût-efficacité différentiel : "), formule("ICER = (C₁ − C₀) / (E₁ − E₀)"),
-    " — critère de décision (Weinstein & Stason, 1977). Sans comparateur, C₀ = E₀ = 0."),
+    " : critère de décision (Weinstein & Stason, 1977). Sans comparateur, C₀ = E₀ = 0."),
   p(strong("Bénéfice monétaire net : "), formule("NMB = λ·ΔE − ΔC"), " ; ", strong("bénéfice sanitaire net : "),
-    formule("NHB = ΔE − ΔC / λ"), " — coût-efficace si NMB > 0 (Stinnett & Mullahy, 1998)."),
+    formule("NHB = ΔE − ΔC / λ"), " : coût-efficace si NMB > 0 (Stinnett & Mullahy, 1998)."),
   p(strong("DALY : "), formule("DALY = YLL + YLD ; YLL = décès × années perdues ; YLD = épisodes × poids × durée"),
     " (Murray, 1994 ; GBD)."),
   p(strong("Rendement financier : "), formule("ROI = (B − C) / C ; ratio B/C = B / C ; VAN = B − C"),
-    " — B = économies actualisées (analyse coût-bénéfice)."),
+    " : B = économies actualisées (analyse coût-bénéfice)."),
   h4("Décision"),
   tags$ul(
     tags$li(strong("Dominant"), " : plus efficace et moins cher → à adopter."),
@@ -297,8 +297,8 @@ methode_fr <- div(
     tags$li(strong("Moins efficace et moins cher"), " : acceptable si l'économie par DALY perdue dépasse λ.")
   ),
   h4("Seuil"),
-  p("Les repères 1–3 × PIB/habitant (Commission Macroéconomie et Santé, 2001) ne sont plus recommandés comme règle ",
-    "de décision (Bertram et al., 2016). Des seuils fondés sur le coût d'opportunité, environ 0,1–0,5 × PIB/habitant ",
+  p("Les repères 1 à 3 × PIB/habitant (Commission Macroéconomie et Santé, 2001) ne sont plus recommandés comme règle ",
+    "de décision (Bertram et al., 2016). Des seuils fondés sur le coût d'opportunité, environ 0,1 à 0,5 × PIB/habitant ",
     "dans les pays à revenu faible et intermédiaire, sont proposés (Woods et al., 2016 ; Ochalek et al., 2018). ",
     "Préférez le seuil de votre ministère ou bailleur."),
   h4("Incertitude"),
@@ -321,17 +321,17 @@ methode_en <- div(
     "with effects measured in health units (cases, deaths, DALYs) (Drummond et al., 2015)."),
   h4("Formulas used"),
   p(strong("Discounted cost: "), formule("C = Σ Cₜ / (1 + r)ᵗ⁻¹"),
-    " — year 1 undiscounted; costs and effects discounted (3% by default, WHO / iDSI)."),
+    ": year 1 undiscounted; costs and effects discounted (3% by default, WHO / iDSI)."),
   p(strong("Cost per beneficiary: "), formule("C / number of beneficiaries")),
-  p(strong("Average cost-effectiveness ratio: "), formule("ACER = C / E"), " — descriptive, not a decision rule."),
+  p(strong("Average cost-effectiveness ratio: "), formule("ACER = C / E"), ": descriptive, not a decision rule."),
   p(strong("Incremental cost-effectiveness ratio: "), formule("ICER = (C₁ − C₀) / (E₁ − E₀)"),
-    " — decision rule (Weinstein & Stason, 1977). Without a comparator, C₀ = E₀ = 0."),
+    ": decision rule (Weinstein & Stason, 1977). Without a comparator, C₀ = E₀ = 0."),
   p(strong("Net monetary benefit: "), formule("NMB = λ·ΔE − ΔC"), "; ", strong("net health benefit: "),
-    formule("NHB = ΔE − ΔC / λ"), " — cost-effective if NMB > 0 (Stinnett & Mullahy, 1998)."),
+    formule("NHB = ΔE − ΔC / λ"), ": cost-effective if NMB > 0 (Stinnett & Mullahy, 1998)."),
   p(strong("DALY: "), formule("DALY = YLL + YLD; YLL = deaths × years lost; YLD = episodes × weight × duration"),
     " (Murray, 1994; GBD)."),
   p(strong("Financial return: "), formule("ROI = (B − C) / C; B/C ratio = B / C; NPV = B − C"),
-    " — B = discounted savings (cost-benefit analysis)."),
+    ": B = discounted savings (cost-benefit analysis)."),
   h4("Decision"),
   tags$ul(
     tags$li(strong("Dominant"), ": more effective and cheaper → adopt."),
@@ -340,8 +340,8 @@ methode_en <- div(
     tags$li(strong("Less effective and cheaper"), ": acceptable if savings per DALY lost exceed λ.")
   ),
   h4("Threshold"),
-  p("The 1–3 × GDP per capita benchmarks (Commission on Macroeconomics and Health, 2001) are no longer recommended ",
-    "as a decision rule (Bertram et al., 2016). Opportunity-cost-based thresholds of about 0.1–0.5 × GDP per capita ",
+  p("The 1 to 3 × GDP per capita benchmarks (Commission on Macroeconomics and Health, 2001) are no longer recommended ",
+    "as a decision rule (Bertram et al., 2016). Opportunity-cost-based thresholds of about 0.1 to 0.5 × GDP per capita ",
     "in low- and middle-income countries have been proposed (Woods et al., 2016; Ochalek et al., 2018). ",
     "Use your ministry's or funder's threshold when available."),
   h4("Uncertainty"),
@@ -393,7 +393,7 @@ ui <- page_navbar(
           tagList(strong(tr("Analyse des coûts simple", "Simple cost analysis")), br(),
                   span(class = "aide", tr("Coût total, coût par bénéficiaire et par résultat. Ni DALY ni économies à saisir.",
                                           "Total cost, cost per beneficiary and per output. No DALYs or savings to enter."))),
-          tagList(strong(tr("ROI — retour sur investissement", "ROI — return on investment")), br(),
+          tagList(strong(tr("ROI : retour sur investissement", "ROI: return on investment")), br(),
                   span(class = "aide", tr("Coûts + économies générées (soins évités, ménages, productivité) → ROI, VAN, ratio bénéfice/coût.",
                                           "Costs + savings generated (care averted, households, productivity) → ROI, NPV, benefit-cost ratio."))),
           tagList(strong(tr("Coût-efficacité", "Cost-effectiveness")), br(),
@@ -643,7 +643,7 @@ ui <- page_navbar(
   ),
 
   nav_spacer(),
-  nav_item(span(style = "color:#9aa6a9; font-size:.85rem; margin-right:.3rem;", "v2026.10.13")),
+  nav_item(span(style = "color:#9aa6a9; font-size:.85rem; margin-right:.3rem;", "v2026.10.13.2")),
   nav_item(tags$button(id = "bouton_langue", type = "button", class = "btn btn-sm btn-outline-primary",
                        onclick = "basculerLangue()", tr("English", "Français")))
 )
@@ -656,11 +656,11 @@ server <- function(input, output, session) {
   L <- function(fr, en_) if (en()) en_ else fr
 
   fmt <- function(x, decimales = 0) {
-    if (is.null(x) || length(x) != 1 || is.na(x) || !is.finite(x)) return("—")
+    if (is.null(x) || length(x) != 1 || is.na(x) || !is.finite(x)) return(L("n.d.", "n/a"))
     if (en()) formatC(x, format = "f", digits = decimales, big.mark = ",")
     else formatC(x, format = "f", digits = decimales, big.mark = " ", decimal.mark = ",")
   }
-  fmt_pct <- function(x) if (is.null(x) || is.na(x)) "—" else paste0(fmt(100 * x), L(" %", "%"))
+  fmt_pct <- function(x) if (is.null(x) || is.na(x)) L("n.d.", "n/a") else paste0(fmt(100 * x), L(" %", "%"))
 
   num <- function(id, defaut = 0) {
     v <- input[[id]]
@@ -689,7 +689,7 @@ server <- function(input, output, session) {
   }, ignoreInit = TRUE)
   # Décimales adaptées aux petits montants (ex. 1,86 par suivi résolu).
   argent <- function(x) {
-    if (is.null(x) || is.na(x) || !is.finite(x)) return("—")
+    if (is.null(x) || is.na(x) || !is.finite(x)) return(L("n.d.", "n/a"))
     a <- abs(x)
     paste(fmt(x, if (a >= 100) 0 else if (a >= 1) 2 else 3), monnaie())
   }
@@ -894,19 +894,19 @@ server <- function(input, output, session) {
     names(a)[names(a) == "daly_par_resultat"] <- "daly_direct"
     appliquer(
       textes = list(
-        nom = if (anglais) "Digital triage innovation — Phase 3 central scenario" else "Innovation de triage numérique — scénario central Phase 3",
+        nom = if (anglais) "Digital triage innovation, Phase 3 central scenario" else "Innovation de triage numérique, scénario central Phase 3",
         organisation = "", pays = "", monnaie = "USD",
         description = if (anglais) paste(
-          "Innovation data from the cost model. A1–A4: non-recurrent development. B: activity volumes —",
+          "Innovation data from the cost model. A1 to A4: non-recurrent development. B: activity volumes:",
           "30,000 beneficiaries covered; MAU = 30,000 × 50% = 15,000; interactions = 15,000 × 2 = 30,000;",
           "escalations = 30,000 × 10% = 3,000; resolved follow-ups = 3,000 × 75% = 2,250 per month (27,000 per year).",
-          "C1–C9: recurrent costs, only C9 (10,000) known so far; Turn.io tariff pending; free access (C4, C5)",
+          "C1 to C9: recurrent costs, only C9 (10,000) known so far; Turn.io tariff pending; free access (C4, C5)",
           "and clinical supervision (C8) not in budget.")
         else paste(
-          "Données de l'innovation issues du modèle de coûts. A1–A4 : développement non récurrent. B : volumes —",
+          "Données de l'innovation issues du modèle de coûts. A1 à A4 : développement non récurrent. B : volumes :",
           "30 000 bénéficiaires couverts ; MAU = 30 000 × 50 % = 15 000 ; interactions = 15 000 × 2 = 30 000 ;",
           "escalades = 30 000 × 10 % = 3 000 ; suivis résolus = 3 000 × 75 % = 2 250 par mois (27 000 par an).",
-          "C1–C9 : coûts récurrents, seul C9 (10 000) est connu ; tarif Turn.io en attente ; accès gratuit (C4, C5)",
+          "C1 à C9 : coûts récurrents, seul C9 (10 000) est connu ; tarif Turn.io en attente ; accès gratuit (C4, C5)",
           "et supervision clinique (C8) hors budget.")),
       nombres = list(duree = 5, taux_couts = 3, taux_effets = 3, attribution = 100, pib_hab = NA,
                      seuil = NA, taux_change = NA, comp_investissement = 0, comp_cout = 0, comp_daly = 0),
@@ -1006,8 +1006,9 @@ server <- function(input, output, session) {
     }
     titre <- div(class = "detail", if (nzchar(txt("nom"))) txt("nom") else L("Votre projet", "Your project"),
                  if (nzchar(pays_nom())) paste(" ·", pays_nom()))
-    partiel <- if (r$partiel) div(class = "detail", span(class = "partiel", L("Estimation partielle", "Partial estimate")), " — ",
-      L("lignes en attente ou hors budget non chiffrées : ", "pending or uncosted not-in-budget lines: "), paste(r$manquantes, collapse = ", "))
+    partiel <- if (r$partiel) div(class = "detail", span(class = "partiel", L("Estimation partielle", "Partial estimate")), L(" : ", ": "),
+      paste0(L("lignes en attente ou hors budget non chiffrées (", "pending or uncosted not-in-budget lines ("),
+             paste(r$manquantes, collapse = ", "), ")"))
     if (!oui("effets_sante") && oui("economies")) {
       f <- r$financier
       couleur_roi <- if (is.na(f$roi)) couleurs$gris else if (f$roi >= 0) couleurs$vert else couleurs$or
@@ -1186,13 +1187,13 @@ server <- function(input, output, session) {
   table_activites <- reactive({
     r <- res(); req(r)
     d <- r$activites
-    petit <- function(x) if (is.na(x)) "—" else fmt(x, if (abs(x) >= 100) 0 else 2)
+    petit <- function(x) if (is.na(x)) L("n.d.", "n/a") else fmt(x, if (abs(x) >= 100) 0 else 2)
     noms_statut <- choix_statut(en())
     t <- data.frame(
       d$code, unname(names(noms_statut)[match(d$statut, noms_statut)]), d$nom,
-      ifelse(d$statut == "attente", "—", vapply(d$cout, fmt, "")), vapply(d$part_cout, fmt_pct, ""),
-      vapply(d$beneficiaires, fmt, ""), ifelse(d$cout > 0, vapply(d$cout_par_beneficiaire, petit, ""), "—"),
-      ifelse(is.na(d$cout_par_resultat) | d$cout <= 0, "—",
+      ifelse(d$statut == "attente", L("n.d.", "n/a"), vapply(d$cout, fmt, "")), vapply(d$part_cout, fmt_pct, ""),
+      vapply(d$beneficiaires, fmt, ""), ifelse(d$cout > 0, vapply(d$cout_par_beneficiaire, petit, ""), L("n.d.", "n/a")),
+      ifelse(is.na(d$cout_par_resultat) | d$cout <= 0, L("n.d.", "n/a"),
              paste(vapply(d$cout_par_resultat, petit, ""), L("par", "per"), d$unite)),
       stringsAsFactors = FALSE
     )
@@ -1217,9 +1218,9 @@ server <- function(input, output, session) {
   )
 
   noms_parametres <- function() if (en()) c(couts = "Costs", resultats = "Outputs achieved", daly = "DALYs per output",
-                                            attribution = "Share attributable", actualisation = "Discount rate (0%–6%)") else
+                                            attribution = "Share attributable", actualisation = "Discount rate (0% to 6%)") else
     c(couts = "Coûts", resultats = "Résultats obtenus", daly = "DALY par résultat",
-      attribution = "Part attribuable", actualisation = "Taux d'actualisation (0 % – 6 %)")
+      attribution = "Part attribuable", actualisation = "Taux d'actualisation (0 % à 6 %)")
 
   output$tornade <- renderPlot({
     a <- activites(); req(a, oui("effets_sante"))
@@ -1327,7 +1328,7 @@ server <- function(input, output, session) {
             if (ce$cout_efficace) L("coût-efficace", "cost-effective") else
               L("non coût-efficace au seuil retenu", "not cost-effective at the chosen threshold")),
           if (oui("incertitude_on")) ligne(L("Probabilité d'être coût-efficace", "Probability of being cost-effective"),
-            tryCatch(fmt_pct(acceptabilite(sim(), s$valeur)), error = function(e) "—")))),
+            tryCatch(fmt_pct(acceptabilite(sim(), s$valeur)), error = function(e) L("n.d.", "n/a"))))),
       if (oui("economies")) tagList(
         h4(L("Rendement financier", "Financial return")),
         tags$table(class = "table table-sm",
